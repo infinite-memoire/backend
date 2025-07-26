@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: memoire-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - APP_DEBUG=true
+      - DATABASE_FIRESTORE_EMULATOR_HOST=firestore:8080
+      - DATABASE_NEO4J_URI=bolt://neo4j:7687
+      - DATABASE_NEO4J_PASSWORD=development_password
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=text
+    volumes:
+      - ./app:/app/app
+      - ./config:/app/config
+      - ./logs:/var/log/memoire
+    depends_on:
+      - neo4j
+      - firestore
+    networks:
+      - memoire-network
+    restart: unless-stopped
+
+  # Neo4j Graph Database
+  neo4j:
+    image: neo4j:5.14
+    container_name: memoire-neo4j
+    ports:
+      - "7474:7474"  # Browser interface
+      - "7687:7687"  # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/development_password
+      - NEO4J_PLUGINS=["graph-data-science"]
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - memoire-network
+    restart: unless-stopped
+
+  # Firestore Emulator
+  firestore:
+    image: google/cloud-sdk:alpine
+    container_name: memoire-firestore
+    ports:
+      - "8080:8080"  # Firestore emulator
+      - "9090:9090"  # Firestore UI
+    command: >
+      sh -c "
+        gcloud components install cloud-firestore-emulator --quiet &&
+        gcloud beta emulators firestore start 
+          --host-port=0.0.0.0:8080 
+          --project=infinite-memoire
+      "
+    networks:
+      - memoire-network
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+
+networks:
+  memoire-network:
+    driver: bridge
