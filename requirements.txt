@@ -1,148 +1,241 @@
-amqp==5.3.1
-annotated-types==0.7.0
-anthropic==0.40.0
-anyio==3.7.1
-audioread==3.0.1
-billiard==4.2.1
-black==23.11.0
-blis==1.3.0
-CacheControl==0.14.3
-cachetools==5.5.2
-catalogue==2.0.10
-celery==5.3.4
-certifi==2025.7.14
-cffi==1.17.1
-charset-normalizer==3.4.2
-click==8.2.1
-click-didyoumean==0.3.1
-click-plugins==1.1.1.2
-click-repl==0.3.0
-cloudpathlib==0.21.1
-colorama==0.4.6
-confection==0.1.5
-coverage==7.10.0
-cryptography==41.0.7
-cymem==2.0.11
-decorator==5.2.1
+# Output Management & Publishing System Dependencies
+
+# Core Web Framework
 fastapi==0.104.1
-filelock==3.18.0
-firebase-admin==6.4.0
-flake8==6.1.0
-fsspec==2025.7.0
-google-api-core==2.25.1
-google-api-python-client==2.177.0
-google-auth==2.40.3
-google-auth-httplib2==0.2.0
-google-cloud-core==2.4.3
+uvicorn[standard]==0.24.0
+starlette==0.27.0
+
+# Database and Storage
 google-cloud-firestore==2.21.0
 google-cloud-storage==3.2.0
-google-crc32c==1.7.1
-google-resumable-media==2.7.2
-googleapis-common-protos==1.70.0
-grpcio==1.74.0
-grpcio-status==1.74.0
-h11==0.16.0
-httpcore==1.0.9
-httplib2==0.22.0
-httptools==0.6.4
-httpx==0.25.2
-huggingface-hub==0.34.1
-idna==3.10
-iniconfig==2.1.0
-Jinja2==3.1.6
-joblib==1.5.1
-kombu==5.5.4
-langcodes==3.5.0
-language_data==1.3.0
-lazy_loader==0.4
-librosa==0.11.0
-llvmlite==0.44.0
-marisa-trie==1.2.1
-markdown-it-py==3.0.0
-MarkupSafe==3.0.2
-mccabe==0.7.0
-mdurl==0.1.2
-more-itertools==10.7.0
-mpmath==1.3.0
-msgpack==1.1.1
-murmurhash==1.0.13
-mypy==1.7.1
-mypy_extensions==1.1.0
+firebase-admin==6.4.0
+
+# Authentication and Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Document Processing
+pandoc==2.3
+markdown==3.5.1
+python-markdown==3.5.1
+beautifulsoup4==4.12.2
+html2text==2020.1.16
+
+# AI and NLP (from existing system)
+anthropic==0.40.0
+openai==1.3.5
+sentence-transformers==2.6.1
+spacy==3.8.7
+transformers==4.54.0
+torch==2.7.1
+
+# Graph Database
 neo4j==5.14.1
-networkx==3.5
-numba==0.61.2
-numpy==2.2.6
-openai-whisper==20250625
-packaging==25.0
-pathspec==0.12.1
-platformdirs==4.3.8
-pluggy==1.6.0
-pooch==1.8.2
-preshed==3.0.10
-prompt_toolkit==3.0.51
-proto-plus==1.26.1
-protobuf==6.31.1
-pyasn1==0.6.1
-pyasn1_modules==0.4.2
-pycodestyle==2.11.1
-pycparser==2.22
+
+# Data Processing and Validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
-pydantic_core==2.14.1
-pydub==0.25.1
-pyflakes==3.1.0
-Pygments==2.19.2
-PyJWT==2.10.1
-pyparsing==3.2.3
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# HTTP Client and Requests
+httpx==0.25.2
+requests==2.32.4
+aiohttp==3.9.1
+
+# Template and Document Generation
+jinja2==3.1.6
+weasyprint==61.2
+reportlab==4.0.7
+
+# Image Processing
+Pillow==10.1.0
+wand==0.6.13
+
+# Async and Concurrency
+asyncio-mqtt==0.16.1
+celery==5.3.4
+redis==5.0.1
+
+# Monitoring and Logging
+structlog==23.2.0
+python-json-logger==2.0.7
+prometheus-client==0.19.0
+
+# Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-python-dateutil==2.9.0.post0
+pytest-mock==3.12.0
+httpx==0.25.2  # For API testing
+factory-boy==3.3.0
+
+# Development Tools
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+pre-commit==3.5.0
+
+# Configuration and Environment
 python-dotenv==1.1.1
-python-json-logger==2.0.7
-python-multipart==0.0.6
+pyyaml==6.0.1
+click==8.2.1
+
+# Date and Time
+python-dateutil==2.9.0.post0
 pytz==2025.2
-PyYAML==6.0.1
-redis==5.0.1
-regex==2024.11.6
-requests==2.32.4
-rich==14.1.0
-rsa==4.9.1
-safetensors==0.5.3
-scikit-learn==1.7.1
-scipy==1.16.0
-setuptools==78.1.1
-shellingham==1.5.4
-six==1.17.0
-smart_open==7.3.0.post1
-sniffio==1.3.1
-soundfile==0.13.1
-soxr==0.5.0.post1
-spacy==3.8.7
-spacy-legacy==3.0.12
-spacy-loggers==1.0.5
-srsly==2.5.1
-starlette==0.27.0
-sympy==1.14.0
-thinc==8.3.6
-threadpoolctl==3.6.0
-tiktoken==0.9.0
-tokenizers==0.21.2
-torch==2.7.1
-torchaudio==2.7.1
-tqdm==4.67.1
-transformers==4.54.0
-typer==0.16.0
-typing_extensions==4.14.1
-tzdata==2025.2
-uritemplate==4.2.0
-urllib3==2.5.0
-uvicorn==0.24.0
-vine==5.1.0
-wasabi==1.1.3
-watchfiles==1.1.0
-wcwidth==0.2.13
-weasel==0.4.1
+
+# Utilities
+typing-extensions==4.14.1
+more-itertools==10.7.0
+pathlib2==2.3.7
+
+# File Processing
+python-magic==0.4.27
+filetype==1.2.0
+
+# Caching
+aiocache==0.12.2
+
+# Email (for notifications)
+aiosmtplib==3.0.1
+email-validator==2.1.0
+
+# Background Jobs
+arq==0.25.0
+
+# Content Analysis
+textstat==0.7.3
+readability==0.3.1
+
+# Export Formats
+fpdf2==2.7.6
+python-docx==1.1.0
+
+# Search and Indexing (for marketplace)
+whoosh==2.7.4
+elasticsearch==8.11.1
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Health Checks
+py-healthcheck==1.10.1
+
+# Database Migrations
+aerich==0.7.2
+
+# API Documentation
+swagger-ui-bundle==0.0.9
+redoc==2.1.0
+
+# Performance Monitoring
+ddtrace==2.5.0
+sentry-sdk[fastapi]==1.38.0
+
+# Compression
+gzip==1.7.6
+brotli==1.1.0
+
+# XML Processing (for advanced publishing formats)
+lxml==4.9.3
+xmltodict==0.13.0
+
+# PDF Processing
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+
+# Cryptography (for secure storage)
+cryptography==41.0.7
+
+# Localization
+babel==2.13.1
+
+# Memory Profiling (development)
+memory-profiler==0.61.0
+psutil==5.9.6
+
+# API Rate Limiting
+limits==3.6.0
+
+# WebSocket Support
 websockets==15.0.1
-wheel==0.45.1
-wrapt==1.17.2
+
+# Data Serialization
+orjson==3.9.10
+msgpack==1.1.1
+
+# Regular Expressions
+regex==2024.11.6
+
+# URL Processing
+furl==2.1.3
+yarl==1.9.4
+
+# Content Validation
+jsonschema==4.20.0
+cerberus==1.3.5
+
+# File Upload Handling
+python-multipart==0.0.6
+aiofiles==23.2.1
+
+# Environment Detection
+python-dotenv==1.1.1
+
+# Progress Tracking
+tqdm==4.67.1
+
+# Parallel Processing
+multiprocessing-logging==0.3.4
+
+# Database Connection Pooling
+asyncpg==0.29.0
+
+# CORS Support
+fastapi-cors==0.0.6
+
+# Session Management
+fastapi-sessions==0.3.2
+
+# Background Tasks
+apscheduler==3.10.4
+
+# Configuration Management
+dynaconf==3.2.4
+
+# CLI Tools
+typer==0.16.0
+
+# Data Validation
+validators==0.22.0
+
+# Network Utilities
+dnspython==2.4.2
+
+# Process Management
+supervisor==4.2.5
+
+# Metrics Collection
+statsd==4.0.1
+
+# Content Security
+bleach==6.1.0
+
+# Geographic Data (if needed for user analytics)
+geoip2==4.7.0
+
+# Machine Learning (for content analysis)
+scikit-learn==1.7.1
+numpy==2.2.6
+
+# Feature Flags
+flipper-client==1.0.0
+
+# A/B Testing
+split-sdk==1.6.0
+
+# Analytics Integration
+mixpanel==4.10.1
+google-analytics-data==0.18.5

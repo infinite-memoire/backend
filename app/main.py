@@ -99,3 +99,31 @@ async def shutdown_event():
         logger.error("AI processing system shutdown failed", error=str(e))
     
     logger.info("Application shutdown completed")
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Get server configuration from settings
+    host = "0.0.0.0"  # Allow external connections
+    port = 8000
+    
+    # Override with environment variables if available
+    import os
+    host = os.getenv("HOST", host)
+    port = int(os.getenv("PORT", port))
+    
+    logger.info("Starting uvicorn server",
+               host=host,
+               port=port,
+               debug=settings.app.debug,
+               environment=settings.app.environment)
+    
+    # Run the server
+    uvicorn.run(
+        "app.main:app",
+        host=host,
+        port=port,
+        reload=settings.app.debug,  # Enable auto-reload in debug mode
+        log_level="info",
+        access_log=True
+    )
