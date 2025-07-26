@@ -1,0 +1,47 @@
+[
+  {
+    "approach_id": "vector_embeddings_approach",
+    "name": "Vector Embeddings with Clustering",
+    "description": "Use sentence transformers to create embeddings for text chunks, then apply clustering algorithms (DBSCAN/K-means) to identify semantic boundaries and relationships. Build graph nodes from clusters and edges from cosine similarity scores.",
+    "key_technologies": ["sentence-transformers", "scikit-learn", "faiss", "networkx"],
+    "strengths": ["Automatic semantic boundary detection", "Scalable vector operations", "No manual rule engineering"],
+    "challenges": ["Parameter tuning for clustering", "High memory requirements", "Black-box decision making"],
+    "timeline_extraction": "Named Entity Recognition (spaCy) + rule-based temporal parsing"
+  },
+  {
+    "approach_id": "knowledge_graph_approach", 
+    "name": "Knowledge Graph with Entity Extraction",
+    "description": "Extract entities (people, places, events) using NER models, then build a knowledge graph with typed relationships. Use graph algorithms to identify communities and storylines based on entity co-occurrence and relationship density.",
+    "key_technologies": ["spaCy", "transformers", "neo4j", "networkx"],
+    "strengths": ["Interpretable entity-based relationships", "Rich semantic typing", "Natural graph structure"],
+    "challenges": ["Complex entity linking", "Relationship classification difficulty", "Requires domain knowledge"],
+    "timeline_extraction": "Dependency parsing + temporal relation extraction models"
+  },
+  {
+    "approach_id": "llm_guided_approach",
+    "name": "LLM-Guided Semantic Analysis",
+    "description": "Use large language models (Claude/GPT) to directly analyze transcript chunks for themes, relationships, and temporal markers. Build graph iteratively through LLM prompts that identify connections and storylines.",
+    "key_technologies": ["anthropic-claude", "langchain", "pydantic", "neo4j"],
+    "strengths": ["High-quality semantic understanding", "Flexible prompt engineering", "Good temporal reasoning"],
+    "challenges": ["API costs and latency", "Consistency across chunks", "Rate limiting issues"],
+    "timeline_extraction": "LLM-based date extraction with confidence scoring"
+  },
+  {
+    "approach_id": "hybrid_pipeline_approach",
+    "name": "Hybrid Multi-Stage Pipeline",
+    "description": "Combine multiple techniques: initial chunking with embeddings, entity extraction for nodes, LLM validation for relationships, and rule-based temporal processing. Use each method's strengths while mitigating weaknesses.",
+    "key_technologies": ["sentence-transformers", "spaCy", "anthropic-claude", "nltk", "neo4j"],
+    "strengths": ["Best of all approaches", "Redundancy for reliability", "Tunable components"],
+    "challenges": ["Complex integration", "Higher computational cost", "More failure points"],
+    "timeline_extraction": "Multi-method consensus: NER + rules + LLM validation"
+  },
+  {
+    "approach_id": "sliding_window_approach",
+    "name": "Sliding Window with Context Preservation",
+    "description": "Process transcripts using sliding windows with overlap, maintaining context across chunks. Use attention mechanisms to identify long-range dependencies and build temporal sequences into storyline graphs.",
+    "key_technologies": ["transformers", "torch", "networkx", "temporal-graph-networks"],
+    "strengths": ["Preserves long-range context", "Natural temporal ordering", "Attention-based relevance"],
+    "challenges": ["Quadratic attention complexity", "Window size optimization", "Context boundary issues"],
+    "timeline_extraction": "Temporal attention + sequence-to-sequence models"
+  }
+]

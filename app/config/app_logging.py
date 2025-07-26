@@ -41,7 +41,7 @@ def _setup_json_logging(settings):
     
     # File handler if configured
     if hasattr(settings.logging, 'log_file_path') and settings.logging.log_file_path:
-        from app_logging.handlers import RotatingFileHandler
+        from logging.handlers import RotatingFileHandler
         
         # Default rotation size if not specified
         rotation_size = "10MB"

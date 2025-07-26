@@ -1,0 +1,47 @@
+# AI Processing System Requirements
+
+# Core NLP and ML libraries
+sentence-transformers==2.2.2
+spacy==3.7.2
+numpy==1.24.3
+scikit-learn==1.3.0
+
+# Graph processing
+networkx==3.1
+neo4j==5.12.0
+
+# LLM integration
+anthropic==0.7.7
+openai==1.3.7  # Optional fallback
+
+# Data processing
+pandas==2.0.3
+python-dateutil==2.8.2
+nltk==3.8.1
+
+# Async and concurrency
+asyncio-throttle==1.0.2
+aiofiles==23.2.1
+
+# Text processing utilities
+regex==2023.8.8
+python-Levenshtein==0.21.1
+fuzzywuzzy==0.18.0
+
+# Configuration and serialization
+pydantic==2.4.2
+PyYAML==6.0.1
+
+# Logging and monitoring
+structlog==23.1.0
+prometheus-client==0.17.1
+
+# Testing (optional)
+pytest==7.4.2
+pytest-asyncio==0.21.1
+pytest-mock==3.11.1
+
+# Development tools (optional)
+black==23.7.0
+isort==5.12.0
+mypy==1.5.1

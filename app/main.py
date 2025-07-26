@@ -45,8 +45,9 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
     
     # Include API routes
-    from app.api.routes import upload, health
+    from app.api.routes import upload, health, ai_processing
     app.include_router(upload.router, prefix=f"{settings.app.api_prefix}/upload")
+    app.include_router(ai_processing.router, prefix=f"{settings.app.api_prefix}/ai")
     app.include_router(health.router, prefix=f"{settings.app.api_prefix}")
     
     logger.info("Application initialization completed",
@@ -70,6 +71,14 @@ async def startup_event():
     await firestore_service.test_connection()
     await neo4j_service.test_connection()
     
+    # Initialize AI processing system
+    from app.services.orchestrator import orchestrator
+    try:
+        health = await orchestrator.health_check()
+        logger.info("AI processing system initialized", status=health["orchestrator"])
+    except Exception as e:
+        logger.error("AI processing system initialization failed", error=str(e))
+    
     logger.info("Application startup completed successfully")
 
 @app.on_event("shutdown")
@@ -80,5 +89,13 @@ async def shutdown_event():
     # Close database connections
     from app.services.neo4j import neo4j_service
     neo4j_service.close()
+    
+    # Close AI processing system
+    from app.services.orchestrator import orchestrator
+    try:
+        orchestrator.close()
+        logger.info("AI processing system shutdown completed")
+    except Exception as e:
+        logger.error("AI processing system shutdown failed", error=str(e))
     
     logger.info("Application shutdown completed")

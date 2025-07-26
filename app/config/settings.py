@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional, List
@@ -15,7 +17,7 @@ class DatabaseSettings(BaseSettings):
     neo4j_database: str = Field("neo4j", description="Neo4j database name")
     
     class Config:
-        env_prefix = "DATABASE_"
+        env_prefix = ""
 
 class ApplicationSettings(BaseSettings):
     # Basic Application Settings
@@ -82,7 +84,8 @@ class Settings(BaseSettings):
     
     class Config:
         case_sensitive = False
-        env_file = ".env"
+        # Use absolute path to .env file relative to the backend directory
+        env_file = Path(__file__).parent.parent.parent / ".env"
         env_file_encoding = "utf-8"
 
 # Global settings instance
