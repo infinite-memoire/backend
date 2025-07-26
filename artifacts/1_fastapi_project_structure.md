@@ -45,24 +45,26 @@ backend/
 ## Core Application Components
 
 ### 1. FastAPI Application (main.py)
+
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import get_settings
-from app.config.logging import setup_logging
+from app.config.app_logging import setup_logging
 from app.api.routes import audio, transcripts, health
+
 
 # Application factory pattern
 def create_app() -> FastAPI:
     settings = get_settings()
     setup_logging()
-    
+
     app = FastAPI(
         title="Memoire Backend API",
         description="Audio-to-book processing backend",
         version="1.0.0"
     )
-    
+
     # CORS configuration (permissive for MVP)
     app.add_middleware(
         CORSMiddleware,
@@ -71,13 +73,14 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Include API routes
     app.include_router(audio.router, prefix="/api/v1/audio")
     app.include_router(transcripts.router, prefix="/api/v1/transcripts")
     app.include_router(health.router, prefix="/api/v1/health")
-    
+
     return app
+
 
 app = create_app()
 ```
