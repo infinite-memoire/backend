@@ -17,7 +17,7 @@ redis==5.0.1
 torch>=2.0.0
 torchaudio>=2.0.0
 transformers>=4.35.0
-whisper-openai==20231117
+openai-whisper>=20240930
 numpy>=1.24.0
 librosa>=0.10.0
 pydub>=0.25.0
