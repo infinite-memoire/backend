@@ -84,27 +84,35 @@ gunicorn main:app -w 4 -k uvicorn.workers.UnicornWorker
 
 ### API Endpoints
 
-#### Content Management
-- `POST /api/v1/books` - Create new book
-- `GET /api/v1/books/{book_id}/chapters` - Get book chapters
-- `POST /api/v1/books/{book_id}/chapters` - Add new chapter
-- `PUT /api/v1/chapters/{chapter_id}` - Update chapter content
+#### Health & System
+- `GET /health` - Basic health check and system status
 
-#### AI Processing
-- `POST /api/v1/ai/process-transcript` - Start AI processing
-- `GET /api/v1/ai/status/{session_id}` - Check processing status
-- `GET /api/v1/ai/results/{session_id}` - Get processing results
+#### Audio Upload & Processing
+- `POST /upload/initiate` - Initiate chunked audio upload session
+- `PUT /upload/chunk/{upload_id}/{chunk_index}` - Upload audio chunk
+- `POST /upload/complete/{upload_id}` - Complete upload and start processing
+- `GET /upload/status/{upload_id}` - Get upload session status
 
-#### Publishing
-- `POST /api/v1/publishing/start/{book_id}` - Start publishing workflow
-- `PUT /api/v1/publishing/{workflow_id}/metadata` - Update publication metadata
-- `POST /api/v1/publishing/{workflow_id}/preview` - Generate preview
-- `POST /api/v1/publishing/{workflow_id}/publish` - Publish book
+#### AI Processing & Transcript Analysis
+- `POST /ai/process-transcript` - Start AI-powered transcript processing
+- `GET /ai/status/{session_id}` - Check processing status and progress
+- `GET /ai/results/{session_id}` - Get final processing results and generated chapters
+- `POST /ai/answer-question/{session_id}` - Answer follow-up questions for content refinement
+- `POST /ai/cancel/{session_id}` - Cancel active processing session
+- `GET /ai/health` - AI service health check
+- `GET /ai/sessions/{user_id}` - Get user's processing sessions
+- `GET /ai/metrics` - Get AI processing performance metrics
 
-#### Marketplace
-- `GET /api/v1/marketplace/books` - Browse published books
-- `GET /api/v1/marketplace/book/{book_id}` - Get book details
-- `POST /api/v1/marketplace/book/{book_id}/unpublish` - Unpublish book
+#### Publishing Workflow (Phase 4)
+- `POST /publishing/start/{book_id}` - Start manual publishing workflow
+- `PUT /publishing/{workflow_id}/metadata` - Update publication metadata (title, description, author, etc.)
+- `PUT /publishing/{workflow_id}/settings` - Update publication settings (visibility, pricing, licensing)
+- `POST /publishing/{workflow_id}/validate` - Validate publication readiness and quality
+- `POST /publishing/{workflow_id}/preview` - Generate HTML preview of published book
+- `POST /publishing/{workflow_id}/publish` - Submit book for publication to marketplace
+- `GET /publishing/{workflow_id}/status` - Get current publishing workflow status
+- `DELETE /publishing/{workflow_id}` - Cancel publishing workflow
+- `GET /publishing/workflows` - List all user publishing workflows
 
 ## Testing
 
@@ -120,36 +128,74 @@ pytest tests/test_publishing.py
 pytest tests/test_conversion.py
 ```
 
-## Development
+## API Endpoint Details
+
+### Audio Upload Flow
+1. **Initiate Upload** - Creates chunked upload session for large audio files
+2. **Upload Chunks** - Streams audio data in manageable chunks with progress tracking
+3. **Complete Upload** - Finalizes upload and triggers automatic transcript processing
+4. **Monitor Status** - Track upload progress and processing state
+
+### AI Processing Pipeline
+1. **Process Transcript** - Analyzes raw transcript text using multiple AI agents:
+   - Semantic chunking and theme extraction
+   - Storyline construction and narrative flow analysis
+   - Chapter generation with quality scoring
+   - Neo4j graph database population for relationships
+2. **Status Monitoring** - Real-time progress tracking with stage-by-stage updates
+3. **Results Retrieval** - Access generated chapters, themes, and storylines
+4. **Interactive Refinement** - Answer follow-up questions to improve content quality
+5. **Session Management** - Cancel, restart, or monitor multiple processing sessions
+
+### Publishing Workflow (Phase 4)
+The manual publishing system provides complete control over book publication:
+
+1. **Workflow Initiation** - Start publishing process with automatic metadata generation
+2. **Metadata Management** - Edit title, description, author bio, categories, tags, and content warnings
+3. **Settings Configuration** - Control visibility (private/public/featured), licensing, and marketplace options
+4. **Quality Validation** - Comprehensive checks for content completeness, metadata quality, and publication readiness
+5. **Preview Generation** - Create HTML preview showing final book appearance
+6. **Publication** - Submit to marketplace with automatic approval (MVP) or manual review
+7. **Status Tracking** - Monitor workflow progress and handle errors
+8. **Workflow Management** - Cancel, restart, or manage multiple publishing workflows
 
 ### Project Structure
 ```
-output_implementation/
+backend/
 ├── app/
-│   ├── services/
-│   │   ├── content_storage.py
-│   │   ├── version_tracking.py
-│   │   ├── chapter_workflow.py
-│   │   ├── validation.py
-│   │   ├── chat_interface.py
-│   │   ├── html_conversion.py
-│   │   └── publishing.py
 │   ├── api/
 │   │   └── routes/
-│   │       ├── content.py
-│   │       ├── publishing.py
-│   │       └── marketplace.py
+│   │       ├── health.py - System health endpoints
+│   │       ├── upload.py - Chunked audio upload
+│   │       ├── ai_processing.py - AI transcript processing
+│   │       └── publishing.py - Manual publishing workflow
 │   ├── models/
-│   │   ├── content.py
-│   │   ├── publishing.py
-│   │   └── validation.py
-│   └── templates/
-│       ├── book.html5
-│       └── styles/
-├── tests/
-├── docs/
-└── config/
+│   │   ├── content.py - Book and chapter data models
+│   │   ├── publishing.py - Publishing workflow models
+│   │   ├── ai_processing.py - AI processing models
+│   │   └── upload_session.py - Upload session models
+│   ├── services/
+│   │   ├── content_storage.py - Firestore content management
+│   │   ├── publishing.py - Publishing workflow service
+│   │   ├── marketplace.py - Marketplace management
+│   │   ├── html_conversion.py - HTML generation service
+│   │   ├── orchestrator.py - AI agent orchestration
+│   │   ├── upload_service.py - Upload session management
+│   │   └── firestore.py - Firestore database service
+│   ├── utils/
+│   │   ├── auth.py - JWT authentication
+│   │   ├── exceptions.py - Custom exception classes
+│   │   ├── logging.py - Structured logging
+│   │   └── upload_validation.py - File validation
+│   ├── dependencies.py - FastAPI dependency injection
+│   └── main.py - Application entry point
+├── templates/ - HTML templates for book generation
+├── tests/ - Test suites
+├── requirements.txt - Python dependencies
+└── Dockerfile - Container configuration
 ```
+
+## Development
 
 ### Adding New Features
 
