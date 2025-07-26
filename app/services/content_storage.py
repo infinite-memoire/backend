@@ -19,8 +19,15 @@ logger = get_logger(__name__)
 class ContentStorageService:
     """Service for managing book and chapter content storage in Firestore"""
     
-    def __init__(self, firestore_client: firestore.Client):
+    def __init__(self, firestore_client: firestore.Client = None):
         self.db = firestore_client
+        if not self.db:
+            # Initialize with default client for testing/development
+            try:
+                self.db = firestore.Client()
+            except Exception:
+                # Mock client for testing
+                self.db = None
         
     async def create_book(self, user_id: str, book_data: BookModel) -> str:
         """Create a new book with initial metadata"""
@@ -379,6 +386,250 @@ class ContentStorageService:
             logger.error("Failed to copy chapters between versions", 
                         book_id=book_id, source=source_version, target=target_version, 
                         error=str(e))
+            raise
+
+
+    async def create_publishing_workflow(self, workflow_data: Dict[str, Any]) -> None:
+        """Create a new publishing workflow"""
+        try:
+            workflow_id = workflow_data["workflow_id"]
+            doc_ref = self.db.collection('publishing_workflows').document(workflow_id)
+            doc_ref.set(workflow_data)
+            
+            logger.info("Created publishing workflow", workflow_id=workflow_id)
+            
+        except Exception as e:
+            logger.error("Failed to create publishing workflow", 
+                        workflow_id=workflow_data.get("workflow_id"), error=str(e))
+            raise
+    
+    async def get_publishing_workflow(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        """Get publishing workflow by ID"""
+        try:
+            doc_ref = self.db.collection('publishing_workflows').document(workflow_id)
+            doc = doc_ref.get()
+            
+            if doc.exists:
+                logger.debug("Retrieved publishing workflow", workflow_id=workflow_id)
+                return doc.to_dict()
+            else:
+                logger.warning("Publishing workflow not found", workflow_id=workflow_id)
+                return None
+                
+        except Exception as e:
+            logger.error("Failed to get publishing workflow", 
+                        workflow_id=workflow_id, error=str(e))
+            raise
+    
+    async def update_publishing_workflow(self, workflow_data: Dict[str, Any]) -> None:
+        """Update publishing workflow"""
+        try:
+            workflow_id = workflow_data["workflow_id"]
+            doc_ref = self.db.collection('publishing_workflows').document(workflow_id)
+            
+            workflow_data["updated_at"] = datetime.now()
+            doc_ref.set(workflow_data)
+            
+            logger.info("Updated publishing workflow", workflow_id=workflow_id)
+            
+        except Exception as e:
+            logger.error("Failed to update publishing workflow", 
+                        workflow_id=workflow_data.get("workflow_id"), error=str(e))
+            raise
+    
+    async def get_user_publishing_workflows(self, user_id: str, 
+                                          status_filter: Optional[str] = None,
+                                          limit: int = 20) -> List[Dict[str, Any]]:
+        """Get all publishing workflows for a user"""
+        try:
+            query = (self.db.collection('publishing_workflows')
+                    .where('user_id', '==', user_id)
+                    .order_by('updated_at', direction=firestore.Query.DESCENDING)
+                    .limit(limit))
+            
+            if status_filter:
+                query = query.where('status', '==', status_filter)
+            
+            docs = query.stream()
+            workflows = [doc.to_dict() for doc in docs]
+            
+            logger.debug("Retrieved user publishing workflows", 
+                        user_id=user_id, count=len(workflows))
+            return workflows
+            
+        except Exception as e:
+            logger.error("Failed to get user publishing workflows", 
+                        user_id=user_id, error=str(e))
+            raise
+    
+    async def create_marketplace_entry(self, entry_data: Dict[str, Any]) -> None:
+        """Create a new marketplace entry"""
+        try:
+            entry_id = entry_data["id"]
+            doc_ref = self.db.collection('marketplace_entries').document(entry_id)
+            doc_ref.set(entry_data)
+            
+            logger.info("Created marketplace entry", entry_id=entry_id)
+            
+        except Exception as e:
+            logger.error("Failed to create marketplace entry", 
+                        entry_id=entry_data.get("id"), error=str(e))
+            raise
+    
+    async def get_marketplace_entry(self, entry_id: str) -> Optional[Dict[str, Any]]:
+        """Get marketplace entry by ID"""
+        try:
+            doc_ref = self.db.collection('marketplace_entries').document(entry_id)
+            doc = doc_ref.get()
+            
+            if doc.exists:
+                logger.debug("Retrieved marketplace entry", entry_id=entry_id)
+                return doc.to_dict()
+            else:
+                logger.warning("Marketplace entry not found", entry_id=entry_id)
+                return None
+                
+        except Exception as e:
+            logger.error("Failed to get marketplace entry", 
+                        entry_id=entry_id, error=str(e))
+            raise
+    
+    async def update_marketplace_entry(self, entry_data: Dict[str, Any]) -> None:
+        """Update marketplace entry"""
+        try:
+            entry_id = entry_data["id"]
+            doc_ref = self.db.collection('marketplace_entries').document(entry_id)
+            
+            entry_data["updated_at"] = datetime.now()
+            doc_ref.set(entry_data)
+            
+            logger.info("Updated marketplace entry", entry_id=entry_id)
+            
+        except Exception as e:
+            logger.error("Failed to update marketplace entry", 
+                        entry_id=entry_data.get("id"), error=str(e))
+            raise
+    
+    async def search_marketplace_entries(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search marketplace entries"""
+        try:
+            query = self.db.collection('marketplace_entries')
+            
+            # Apply basic filters
+            if search_params.get("status"):
+                query = query.where('status', '==', search_params["status"])
+            
+            if search_params.get("category"):
+                query = query.where('category', '==', search_params["category"])
+            
+            if search_params.get("language"):
+                query = query.where('language', '==', search_params["language"])
+            
+            if search_params.get("visibility"):
+                visibilities = search_params["visibility"]
+                if isinstance(visibilities, str):
+                    visibilities = [visibilities]
+                query = query.where('visibility', 'in', visibilities)
+            
+            # Apply ordering and limit
+            query = query.order_by('publication_date', direction=firestore.Query.DESCENDING)
+            query = query.limit(search_params.get("limit", 20))
+            
+            if search_params.get("offset", 0) > 0:
+                # For pagination, would need to implement cursor-based pagination
+                pass
+            
+            docs = query.stream()
+            entries = [doc.to_dict() for doc in docs]
+            
+            # Basic text search on results (in production, use search service)
+            if search_params.get("query"):
+                query_text = search_params["query"].lower()
+                filtered_entries = []
+                for entry in entries:
+                    title = entry.get('title', '').lower()
+                    description = entry.get('description', '').lower()
+                    tags = ' '.join(entry.get('tags', [])).lower()
+                    
+                    if query_text in title or query_text in description or query_text in tags:
+                        filtered_entries.append(entry)
+                
+                entries = filtered_entries
+            
+            logger.debug("Searched marketplace entries", 
+                        query=search_params.get("query"), count=len(entries))
+            
+            return {
+                "entries": entries,
+                "total_count": len(entries)  # In production, get actual total count
+            }
+            
+        except Exception as e:
+            logger.error("Failed to search marketplace entries", error=str(e))
+            raise
+    
+    async def get_featured_marketplace_entries(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get featured marketplace entries"""
+        try:
+            query = (self.db.collection('marketplace_entries')
+                    .where('featured', '==', True)
+                    .where('status', '==', 'active')
+                    .where('visibility', 'in', ['public', 'featured'])
+                    .order_by('publication_date', direction=firestore.Query.DESCENDING)
+                    .limit(limit))
+            
+            docs = query.stream()
+            entries = [doc.to_dict() for doc in docs]
+            
+            logger.debug("Retrieved featured marketplace entries", count=len(entries))
+            return entries
+            
+        except Exception as e:
+            logger.error("Failed to get featured marketplace entries", error=str(e))
+            raise
+    
+    async def get_trending_marketplace_entries(self, limit: int = 10, days: int = 7) -> List[Dict[str, Any]]:
+        """Get trending marketplace entries based on recent activity"""
+        try:
+            # For MVP, just return recent entries sorted by view count
+            # In production, implement proper trending algorithm
+            query = (self.db.collection('marketplace_entries')
+                    .where('status', '==', 'active')
+                    .where('visibility', 'in', ['public', 'featured'])
+                    .order_by('view_count', direction=firestore.Query.DESCENDING)
+                    .limit(limit))
+            
+            docs = query.stream()
+            entries = [doc.to_dict() for doc in docs]
+            
+            logger.debug("Retrieved trending marketplace entries", count=len(entries))
+            return entries
+            
+        except Exception as e:
+            logger.error("Failed to get trending marketplace entries", error=str(e))
+            raise
+    
+    async def get_user_marketplace_entries(self, user_id: str, 
+                                         status_filter: List[str] = None) -> List[Dict[str, Any]]:
+        """Get all marketplace entries for a user"""
+        try:
+            query = (self.db.collection('marketplace_entries')
+                    .where('user_id', '==', user_id)
+                    .order_by('publication_date', direction=firestore.Query.DESCENDING))
+            
+            if status_filter:
+                query = query.where('status', 'in', status_filter)
+            
+            docs = query.stream()
+            entries = [doc.to_dict() for doc in docs]
+            
+            logger.debug("Retrieved user marketplace entries", 
+                        user_id=user_id, count=len(entries))
+            return entries
+            
+        except Exception as e:
+            logger.error("Failed to get user marketplace entries", 
+                        user_id=user_id, error=str(e))
             raise
 
 
