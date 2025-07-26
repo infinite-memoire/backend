@@ -126,18 +126,6 @@ aerich==0.7.2
 # API Documentation
 swagger-ui-bundle==0.0.9
 
-# Performance Monitoring
-ddtrace==2.5.0
-sentry-sdk[fastapi]==1.38.0
-
-
-# PDF Processing
-PyPDF2==3.0.1
-pdfplumber==0.10.3
-
-# Cryptography (for secure storage)
-cryptography==41.0.7
-
 # Localization
 babel==2.13.1
 
