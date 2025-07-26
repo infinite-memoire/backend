@@ -15,7 +15,7 @@ import traceback
 import numpy as np
 
 from app.utils.logging import get_logger, log_performance
-from .semantic_chunker import SemanticChunker, ProcessedTranscript
+from .semantic_chunker import SemanticChunker
 from .graph_builder import GraphBuilder, StorylineNode
 from .agents import (
     BaseAgent, 

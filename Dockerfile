@@ -15,6 +15,7 @@ COPY pyproject.toml .
 
 # Install dependencies using uv
 RUN uv pip install --system -e .
+RUN python -m spacy download en_core_web_sm
 
 # Copy application code
 COPY app/ ./app/
