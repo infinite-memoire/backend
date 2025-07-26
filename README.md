@@ -1,128 +1,112 @@
-# Memoire Backend - MVP Foundation Implementation
+# Output Management & Publishing System
 
-This is the production-ready implementation of the Memoire Backend MVP, featuring FastAPI, Firestore, Neo4j, and chunked file upload capabilities.
+This module implements the complete output management and publishing pipeline for the Memoire AI Book Generator, including content storage, version control, HTML conversion, and marketplace publishing.
+
+## Architecture Overview
+
+The system consists of several interconnected services:
+
+1. **Content Storage Service** - Manages book and chapter content in Firestore
+2. **Version Tracking Service** - Handles database-based version control
+3. **Sequential Chapter Workflow** - Coordinates AI chapter generation
+4. **Markdown Validation Service** - Validates content quality and structure
+5. **Chat Interface Service** - Manages follow-up question interactions
+6. **HTML Conversion Pipeline** - Converts markdown to formatted HTML using Pandoc
+7. **Publishing Workflow Service** - Handles manual publishing to marketplace
+8. **Marketplace Service** - Manages book listings and discovery
 
 ## Features
 
-- **FastAPI Framework**: Modern, fast web framework for building APIs
-- **Chunked File Upload**: Robust handling of large audio files with validation and retry logic
-- **Firestore Integration**: NoSQL database for audio metadata and upload sessions
-- **Neo4j Integration**: Graph database for storyline relationships
-- **Background Task Processing**: Async processing for long-running operations
-- **Structured Logging**: JSON-formatted logging with performance tracking
-- **Configuration Management**: Environment-based configuration with validation
-- **Docker Support**: Containerized deployment with development and production configs
+### Content Management
+- Firestore-based content storage with metadata
+- Database-driven version control (no Git dependency)
+- Sequential chapter generation with AI agents
+- Comprehensive markdown validation
+- Cross-reference and consistency tracking
 
-## Quick Start
+### Publishing Pipeline
+- Pandoc-based HTML conversion with templates
+- Manual publishing workflow with validation
+- Preview generation and quality checks
+- Marketplace integration with metadata
+- Multi-format export capabilities
 
-### Prerequisites
+### User Interaction
+- Chat interface for follow-up questions
+- Progressive question presentation
+- Answer integration and content updates
+- Real-time status tracking
 
-- Python 3.11+
-- Docker and Docker Compose
-- Git
+## Installation
 
-### Development Setup
-
-1. **Clone and setup environment**:
 ```bash
-cp .env.template .env
-# Edit .env with your configuration
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install Pandoc (required for HTML conversion)
+# Ubuntu/Debian:
+sudo apt-get install pandoc
+
+# macOS:
+brew install pandoc
+
+# Windows:
+# Download from https://pandoc.org/installing.html
 ```
-
-2. **Start development environment**:
-```bash
-docker-compose up -d
-```
-
-3. **Install dependencies (for local development)**:
-```bash
-pip install -r requirements.txt -r requirements-dev.txt
-```
-
-4. **Run tests**:
-```bash
-pytest
-```
-
-5. **Start development server**:
-```bash
-uvicorn app.main:app --reload
-```
-
-### Services
-
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Neo4j Browser**: http://localhost:7474 (user: neo4j, password: development_password)
-- **Firestore Emulator UI**: http://localhost:9090
-
-## API Endpoints
-
-### Upload Endpoints
-
-- `POST /api/v1/upload/initiate` - Initiate chunked upload
-- `PUT /api/v1/upload/chunk/{upload_id}/{chunk_index}` - Upload chunk
-- `POST /api/v1/upload/complete/{upload_id}` - Complete upload
-- `GET /api/v1/upload/status/{upload_id}` - Get upload status
-
-### Health Check
-
-- `GET /api/v1/health` - Service health check
-
-## Architecture
-
-### Project Structure
-
-```
-app/
-├── api/
-│   └── routes/          # API route handlers
-├── config/              # Configuration management
-├── models/              # Data models
-├── services/            # Business logic services
-├── utils/               # Utility functions
-└── middleware/          # Custom middleware
-
-tests/                   # Test suite
-config/                  # Configuration files
-docs/                    # Documentation
-```
-
-### Database Schema
-
-**Firestore Collections**:
-- `audio_files` - Audio file metadata
-- `upload_sessions` - Chunked upload session data
-- `upload_chunks` - Individual chunk data
-- `processing_tasks` - Background task status
-
-**Neo4j Schema**:
-- Audio nodes with metadata
-- Chunk relationships for storyline analysis
 
 ## Configuration
 
-### Environment Variables
+Copy the environment template and configure:
 
-All configuration is managed through environment variables with the following prefixes:
+```bash
+cp .env.template .env
+# Edit .env with your settings
+```
 
-- `APP_*` - Application settings
-- `*` - Database connection settings
-- `UPLOAD_*` - File upload configuration
-- `TASK_*` - Background task settings
-- `LOG_*` - Logging configuration
+Required environment variables:
+- `FIRESTORE_PROJECT_ID` - Google Cloud Firestore project
+- `ANTHROPIC_API_KEY` - For AI agent interactions
+- `NEO4J_URI` - Neo4j database connection
+- `NEO4J_USER` - Neo4j username  
+- `NEO4J_PASSWORD` - Neo4j password
 
-### Key Settings
+## Usage
 
-- `UPLOAD_MAX_UPLOAD_SIZE_MB`: Maximum file size (default: 100MB)
-- `UPLOAD_CHUNK_SIZE_MB`: Chunk size for uploads (default: 5MB)
-- `FIRESTORE_PROJECT_ID`: Firebase project ID
-- `NEO4J_URI`: Neo4j connection URI
-- `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
+### Starting the Service
 
-## Development
+```bash
+# Development mode
+uvicorn main:app --reload --port 8000
 
-### Running Tests
+# Production mode
+gunicorn main:app -w 4 -k uvicorn.workers.UnicornWorker
+```
+
+### API Endpoints
+
+#### Content Management
+- `POST /api/v1/books` - Create new book
+- `GET /api/v1/books/{book_id}/chapters` - Get book chapters
+- `POST /api/v1/books/{book_id}/chapters` - Add new chapter
+- `PUT /api/v1/chapters/{chapter_id}` - Update chapter content
+
+#### AI Processing
+- `POST /api/v1/ai/process-transcript` - Start AI processing
+- `GET /api/v1/ai/status/{session_id}` - Check processing status
+- `GET /api/v1/ai/results/{session_id}` - Get processing results
+
+#### Publishing
+- `POST /api/v1/publishing/start/{book_id}` - Start publishing workflow
+- `PUT /api/v1/publishing/{workflow_id}/metadata` - Update publication metadata
+- `POST /api/v1/publishing/{workflow_id}/preview` - Generate preview
+- `POST /api/v1/publishing/{workflow_id}/publish` - Publish book
+
+#### Marketplace
+- `GET /api/v1/marketplace/books` - Browse published books
+- `GET /api/v1/marketplace/book/{book_id}` - Get book details
+- `POST /api/v1/marketplace/book/{book_id}/unpublish` - Unpublish book
+
+## Testing
 
 ```bash
 # Run all tests
@@ -131,118 +115,125 @@ pytest
 # Run with coverage
 pytest --cov=app --cov-report=html
 
-# Run specific test file
-pytest tests/test_upload_service.py
+# Run specific test modules
+pytest tests/test_publishing.py
+pytest tests/test_conversion.py
 ```
 
-### Code Quality
+## Development
 
-```bash
-# Format code
-black app/ tests/
-
-# Lint code
-flake8 app/ tests/
-
-# Type checking
-mypy app/
-
-# Security scan
-bandit -r app/
+### Project Structure
+```
+output_implementation/
+├── app/
+│   ├── services/
+│   │   ├── content_storage.py
+│   │   ├── version_tracking.py
+│   │   ├── chapter_workflow.py
+│   │   ├── validation.py
+│   │   ├── chat_interface.py
+│   │   ├── html_conversion.py
+│   │   └── publishing.py
+│   ├── api/
+│   │   └── routes/
+│   │       ├── content.py
+│   │       ├── publishing.py
+│   │       └── marketplace.py
+│   ├── models/
+│   │   ├── content.py
+│   │   ├── publishing.py
+│   │   └── validation.py
+│   └── templates/
+│       ├── book.html5
+│       └── styles/
+├── tests/
+├── docs/
+└── config/
 ```
 
-### Database Setup
+### Adding New Features
 
-**For Development (using emulators)**:
-- Firestore emulator runs automatically with docker-compose
-- Neo4j runs in development mode with default credentials
+1. Define data models in `app/models/`
+2. Implement business logic in `app/services/`
+3. Create API endpoints in `app/api/routes/`
+4. Add comprehensive tests in `tests/`
+5. Update documentation
 
-**For Production**:
-- Configure Firebase service account credentials
-- Set up production Neo4j instance
-- Update environment variables accordingly
+### Code Style
+
+- Follow PEP 8 for Python code
+- Use type hints for all function signatures
+- Maintain test coverage above 80%
+- Document all public APIs with docstrings
 
 ## Deployment
 
-### Docker Production
+### Docker Deployment
 
 ```bash
-# Build production image
-docker build -t memoire-backend:latest .
+# Build image
+docker build -t memoire-output-management .
 
-# Run production stack
-docker-compose -f docker-compose.prod.yml up -d
+# Run container
+docker run -p 8000:8000 \
+  -e FIRESTORE_PROJECT_ID=your-project \
+  -e ANTHROPIC_API_KEY=your-key \
+  memoire-output-management
 ```
 
-### Environment-Specific Deployment
+### Production Considerations
 
-1. **Development**: Uses emulators and debug settings
-2. **Production**: Uses real databases and optimized settings
-
-### Health Checks
-
-The application includes comprehensive health checks:
-- Database connectivity
-- Service availability
-- Resource utilization
+- Use environment-specific configuration
+- Set up proper logging and monitoring
+- Configure rate limiting for API endpoints
+- Use Redis for caching frequently accessed content
+- Set up CDN for static assets and generated HTML
+- Monitor storage usage and implement cleanup policies
 
 ## Monitoring
 
-### Logging
+The system includes built-in monitoring endpoints:
 
-- Structured JSON logging in production
-- Human-readable text logging in development
-- Performance tracking for all API calls
-- Request/response logging with correlation IDs
-
-### Metrics
-
-- Upload success/failure rates
-- Processing times
-- Background task completion rates
-- Database connection health
-
-## Security
-
-- Input validation for all endpoints
-- File type and size restrictions
-- Secure file storage in Firestore
-- Non-root Docker containers
-- Environment-based secrets management
+- `/health` - Basic health check
+- `/metrics` - Prometheus metrics
+- `/api/v1/system/status` - Detailed system status
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Connection refused errors**: Ensure all services are running with `docker-compose ps`
-2. **Upload failures**: Check file size limits and chunk validation
-3. **Database connection issues**: Verify environment variables and service health
+1. **Pandoc conversion fails**
+   - Ensure Pandoc is installed and in PATH
+   - Check template file permissions
+   - Verify markdown syntax validity
 
-### Debug Mode
+2. **Firestore connection errors**
+   - Check project ID and credentials
+   - Verify network connectivity
+   - Ensure proper IAM permissions
 
-Set `APP_DEBUG=true` and `LOG_LEVEL=DEBUG` for detailed logging.
+3. **AI processing timeouts**
+   - Check Anthropic API key validity
+   - Monitor rate limits
+   - Verify Neo4j connectivity
 
-### Log Analysis
+### Logs
 
-```bash
-# View application logs
-docker-compose logs backend
+Application logs are written to:
+- Development: Console output
+- Production: `/var/log/memoire/output-management.log`
 
-# Follow logs in real-time
-docker-compose logs -f backend
-
-# View specific service logs
-docker-compose logs neo4j
-```
+Log levels can be configured via `LOG_LEVEL` environment variable.
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make changes with tests
-4. Run quality checks
-5. Submit a pull request
+4. Run linting: `flake8 app/ tests/`
+5. Run tests: `pytest`
+6. Submit pull request
 
 ## License
 
-MIT License - see LICENSE file for details
+This project is licensed under the MIT License - see LICENSE file for details.

@@ -5,12 +5,15 @@ Agent Orchestrator for coordinating the multi-agent AI processing pipeline
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 import uuid
 import json
 from enum import Enum
 import traceback
+
+import numpy as np
+
 from app.utils.logging import get_logger, log_performance
 from .semantic_chunker import SemanticChunker, ProcessedTranscript
 from .graph_builder import GraphBuilder, StorylineNode
