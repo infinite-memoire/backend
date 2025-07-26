@@ -25,7 +25,7 @@ class DatabaseSettings(BaseSettings):
     neo4j_database: str = Field("neo4j", description="Neo4j database name")
     
     class Config:
-        env_prefix = "DATABASE_"
+        env_prefix = ""
 
 class ApplicationSettings(BaseSettings):
     # Basic Application Settings

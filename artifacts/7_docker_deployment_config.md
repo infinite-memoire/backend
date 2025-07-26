@@ -108,9 +108,9 @@ services:
     environment:
       - ENVIRONMENT=development
       - APP_DEBUG=true
-      - DATABASE_FIRESTORE_EMULATOR_HOST=firestore:8080
-      - DATABASE_NEO4J_URI=bolt://neo4j:7687
-      - DATABASE_NEO4J_PASSWORD=development_password
+      - FIRESTORE_EMULATOR_HOST=firestore:8080
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=development_password
       - LOG_LEVEL=DEBUG
       - LOG_FORMAT=text
     volumes:
@@ -203,9 +203,9 @@ services:
     environment:
       - ENVIRONMENT=production
       - APP_DEBUG=false
-      - DATABASE_FIRESTORE_PROJECT_ID=infinite-memoire
-      - DATABASE_NEO4J_URI=bolt://neo4j:7687
-      - DATABASE_NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - FIRESTORE_PROJECT_ID=infinite-memoire
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       - LOG_FILE_PATH=/var/log/memoire/app.log
@@ -273,12 +273,12 @@ APP_NAME="Memoire Backend API"
 APP_VERSION="1.0.0"
 
 # Database Settings
-DATABASE_FIRESTORE_PROJECT_ID=infinite-memoire
-DATABASE_FIRESTORE_EMULATOR_HOST=localhost:8080
-DATABASE_NEO4J_URI=bolt://localhost:7687
-DATABASE_NEO4J_USER=neo4j
-DATABASE_NEO4J_PASSWORD=your_password_here
-DATABASE_NEO4J_DATABASE=neo4j
+FIRESTORE_PROJECT_ID=infinite-memoire
+FIRESTORE_EMULATOR_HOST=localhost:8080
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_password_here
+NEO4J_DATABASE=neo4j
 
 # Upload Settings
 UPLOAD_MAX_UPLOAD_SIZE_MB=100
@@ -308,11 +308,11 @@ ENVIRONMENT=production
 APP_DEBUG=false
 
 # Use actual Firebase project (no emulator)
-DATABASE_FIRESTORE_EMULATOR_HOST=
+FIRESTORE_EMULATOR_HOST=
 
 # Production Neo4j
-DATABASE_NEO4J_URI=bolt://production-neo4j:7687
-DATABASE_NEO4J_PASSWORD=${NEO4J_PRODUCTION_PASSWORD}
+NEO4J_URI=bolt://production-neo4j:7687
+NEO4J_PASSWORD=${NEO4J_PRODUCTION_PASSWORD}
 
 # Production logging
 LOG_LEVEL=INFO
@@ -356,11 +356,11 @@ spec:
         env:
         - name: ENVIRONMENT
           value: "production"
-        - name: DATABASE_FIRESTORE_PROJECT_ID
+        - name: FIRESTORE_PROJECT_ID
           value: "infinite-memoire"
-        - name: DATABASE_NEO4J_URI
+        - name: NEO4J_URI
           value: "bolt://neo4j-service:7687"
-        - name: DATABASE_NEO4J_PASSWORD
+        - name: NEO4J_PASSWORD
           valueFrom:
             secretKeyRef:
               name: neo4j-secret
@@ -617,8 +617,8 @@ jobs:
         cd backend
         pytest --cov=app --cov-report=xml
       env:
-        DATABASE_NEO4J_URI: bolt://localhost:7687
-        DATABASE_NEO4J_PASSWORD: test_password
+        NEO4J_URI: bolt://localhost:7687
+        NEO4J_PASSWORD: test_password
     
     - name: Upload coverage
       uses: codecov/codecov-action@v3

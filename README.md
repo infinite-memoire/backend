@@ -107,7 +107,7 @@ docs/                    # Documentation
 All configuration is managed through environment variables with the following prefixes:
 
 - `APP_*` - Application settings
-- `DATABASE_*` - Database connection settings
+- `*` - Database connection settings
 - `UPLOAD_*` - File upload configuration
 - `TASK_*` - Background task settings
 - `LOG_*` - Logging configuration
@@ -116,8 +116,8 @@ All configuration is managed through environment variables with the following pr
 
 - `UPLOAD_MAX_UPLOAD_SIZE_MB`: Maximum file size (default: 100MB)
 - `UPLOAD_CHUNK_SIZE_MB`: Chunk size for uploads (default: 5MB)
-- `DATABASE_FIRESTORE_PROJECT_ID`: Firebase project ID
-- `DATABASE_NEO4J_URI`: Neo4j connection URI
+- `FIRESTORE_PROJECT_ID`: Firebase project ID
+- `NEO4J_URI`: Neo4j connection URI
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
 
 ## Development
