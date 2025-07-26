@@ -676,11 +676,12 @@ def _validate_task_config(task_config):
 
 ## 4. Application Initialization
 ### 4.1 Startup Configuration
+
 ```python
 # app/main.py (enhanced with configuration and logging)
 from fastapi import FastAPI
 from app.config.settings import get_settings
-from app.config.logging import setup_logging
+from app.config.app_logging import setup_logging
 from app.config.validation import validate_configuration
 from app.utils.logging import get_logger
 
@@ -694,14 +695,15 @@ validate_configuration()
 # Get settings
 settings = get_settings()
 
+
 def create_app() -> FastAPI:
     """Create FastAPI application with proper configuration"""
-    
+
     logger.info("Starting application initialization",
-               app_name=settings.app.app_name,
-               version=settings.app.app_version,
-               environment=settings.app.environment)
-    
+                app_name=settings.app.app_name,
+                version=settings.app.app_version,
+                environment=settings.app.environment)
+
     app = FastAPI(
         title=settings.app.app_name,
         version=settings.app.app_version,
@@ -709,7 +711,7 @@ def create_app() -> FastAPI:
         docs_url=settings.app.docs_url,
         redoc_url=settings.app.redoc_url
     )
-    
+
     # Configure CORS
     from fastapi.middleware.cors import CORSMiddleware
     app.add_middleware(
@@ -719,48 +721,51 @@ def create_app() -> FastAPI:
         allow_methods=settings.app.cors_allow_methods,
         allow_headers=settings.app.cors_allow_headers,
     )
-    
+
     # Add request logging middleware
     from app.middleware.logging import LoggingMiddleware
     app.add_middleware(LoggingMiddleware)
-    
+
     # Include API routes
     from app.api.routes import audio, transcripts, health
     app.include_router(audio.router, prefix=f"{settings.app.api_prefix}/audio")
     app.include_router(transcripts.router, prefix=f"{settings.app.api_prefix}/transcripts")
     app.include_router(health.router, prefix=f"{settings.app.api_prefix}/health")
-    
+
     logger.info("Application initialization completed",
-               routes_count=len(app.routes),
-               middleware_count=len(app.user_middleware))
-    
+                routes_count=len(app.routes),
+                middleware_count=len(app.user_middleware))
+
     return app
 
+
 app = create_app()
+
 
 @app.on_event("startup")
 async def startup_event():
     """Application startup event handler"""
     logger.info("Application startup initiated")
-    
+
     # Initialize database connections
     from app.services.firestore import firestore_service
     from app.services.neo4j import neo4j_service
-    
+
     # Test database connections
     await firestore_service.test_connection()
     await neo4j_service.test_connection()
-    
+
     logger.info("Application startup completed successfully")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event handler"""
     logger.info("Application shutdown initiated")
-    
+
     # Close database connections
     from app.services.neo4j import neo4j_service
     neo4j_service.close()
-    
+
     logger.info("Application shutdown completed")
 ```
