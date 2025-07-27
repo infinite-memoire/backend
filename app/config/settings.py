@@ -17,7 +17,7 @@ class DatabaseSettings(BaseSettings):
     neo4j_database: str = Field("neo4j", description="Neo4j database name")
     
     class Config:
-        env_prefix = ""
+        env_prefix = "DATABASE_"
 
 class ApplicationSettings(BaseSettings):
     # Basic Application Settings
@@ -55,21 +55,21 @@ class FileUploadSettings(BaseSettings):
 
 class BackgroundTaskSettings(BaseSettings):
     # Task Configuration
-    task_timeout_seconds: int = Field(3600, description="Default task timeout")
+    timeout_seconds: int = Field(3600, description="Default task timeout")
     max_concurrent_tasks: int = Field(5, description="Maximum concurrent background tasks")
-    task_retry_attempts: int = Field(3, description="Maximum task retry attempts")
-    task_cleanup_interval_hours: int = Field(24, description="Task cleanup interval")
+    retry_attempts: int = Field(3, description="Maximum task retry attempts")
+    cleanup_interval_hours: int = Field(24, description="Task cleanup interval")
     
     class Config:
         env_prefix = "TASK_"
 
 class LoggingSettings(BaseSettings):
     # Logging Configuration
-    log_level: str = Field("INFO", description="Logging level")
-    log_format: str = Field("json", description="Log format: json or text")
-    log_file_path: Optional[str] = Field(None, description="Log file path")
-    log_rotation_size: str = Field("10MB", description="Log file rotation size")
-    log_retention_days: int = Field(30, description="Log retention period")
+    level: str = Field("INFO", description="Logging level")
+    format: str = Field("json", description="Log format: json or text")
+    file_path: Optional[str] = Field(None, description="Log file path")
+    rotation_size: str = Field("10MB", description="Log file rotation size")
+    retention_days: int = Field(30, description="Log retention period")
     
     class Config:
         env_prefix = "LOG_"
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     app: ApplicationSettings = Field(default_factory=ApplicationSettings)
     upload: FileUploadSettings = Field(default_factory=FileUploadSettings)
-    tasks: BackgroundTaskSettings = Field(default_factory=BackgroundTaskSettings)
+    task: BackgroundTaskSettings = Field(default_factory=BackgroundTaskSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     
     class Config:
