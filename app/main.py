@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -19,6 +20,50 @@ validate_configuration()
 settings = get_settings()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup and shutdown events"""
+    # Startup
+    logger.info("Application startup initiated")
+
+    # Initialize database connections
+    from app.services.firestore import firestore_service
+    from app.services.neo4j import neo4j_service
+
+    # Test database connections
+    await firestore_service.test_connection()
+    await neo4j_service.test_connection()
+
+    # Initialize AI processing system
+    from app.services.orchestrator import orchestrator
+    try:
+        health = await orchestrator.health_check()
+        logger.info("AI processing system initialized", status=health["orchestrator"])
+    except Exception as e:
+        logger.error("AI processing system initialization failed", error=str(e))
+
+    logger.info("Application startup completed successfully")
+
+    yield  # This is where the application runs
+
+    # Shutdown
+    logger.info("Application shutdown initiated")
+
+    # Close database connections
+    from app.services.neo4j import neo4j_service
+    neo4j_service.close()
+
+    # Close AI processing system
+    from app.services.orchestrator import orchestrator
+    try:
+        orchestrator.close()
+        logger.info("AI processing system shutdown completed")
+    except Exception as e:
+        logger.error("AI processing system shutdown failed", error=str(e))
+
+    logger.info("Application shutdown completed")
+
+
 def create_app() -> FastAPI:
     """Create FastAPI application with proper configuration"""
 
@@ -32,7 +77,8 @@ def create_app() -> FastAPI:
         version=settings.app.app_version,
         debug=settings.app.debug,
         docs_url=settings.app.docs_url,
-        redoc_url=settings.app.redoc_url
+        redoc_url=settings.app.redoc_url,
+        lifespan=lifespan
     )
 
     # Configure CORS
@@ -62,50 +108,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event handler"""
-    logger.info("Application startup initiated")
-
-    # Initialize database connections
-    from app.services.firestore import firestore_service
-    from app.services.neo4j import neo4j_service
-
-    # Test database connections
-    await firestore_service.test_connection()
-    await neo4j_service.test_connection()
-
-    # Initialize AI processing system
-    from app.services.orchestrator import orchestrator
-    try:
-        health = await orchestrator.health_check()
-        logger.info("AI processing system initialized", status=health["orchestrator"])
-    except Exception as e:
-        logger.error("AI processing system initialization failed", error=str(e))
-
-    logger.info("Application startup completed successfully")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event handler"""
-    logger.info("Application shutdown initiated")
-
-    # Close database connections
-    from app.services.neo4j import neo4j_service
-    neo4j_service.close()
-
-    # Close AI processing system
-    from app.services.orchestrator import orchestrator
-    try:
-        orchestrator.close()
-        logger.info("AI processing system shutdown completed")
-    except Exception as e:
-        logger.error("AI processing system shutdown failed", error=str(e))
-
-    logger.info("Application shutdown completed")
 
 
 if __name__ == "__main__":

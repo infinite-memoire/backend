@@ -148,18 +148,15 @@ async def process_audio_background(
         combined_transcript = await processor.transcribe_audio_files(temp_files)
         
         # Step 3: Process through AgentOrchestrator (existing AI pipeline)
-        await processor.orchestrator.start_processing(
+        success = await processor.orchestrator.start_processing_from_session(
             session_id=session_id,
             transcript=combined_transcript,
-            metadata={
-                "chapter_title": chapter_title,
-                "chapter_description": chapter_description,
-                "audio_urls": audio_urls,
-                "user_preferences": user_preferences,
-                "processing_type": "firebase_audio_to_book",
-                "created_at": datetime.utcnow().isoformat()
-            }
+            user_id="firebase_user",  # Default user ID for Firebase integration
+            user_preferences=user_preferences
         )
+        
+        if not success:
+            raise Exception(f"Failed to start processing for session {session_id}")
         
         logger.info(f"Successfully started AI processing for session {session_id}")
     

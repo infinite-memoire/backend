@@ -97,6 +97,7 @@ class AgentOrchestrator:
         # Session management
         self.active_sessions: Dict[str, ProcessingSession] = {}
         self.completed_sessions: Dict[str, ProcessingSession] = {}
+        self.pending_sessions: Dict[str, Dict[str, Any]] = {}  # For sessions created but not started
         
         # Progress tracking
         self.progress_callbacks: Dict[str, List[Callable]] = {}
@@ -119,6 +120,113 @@ class AgentOrchestrator:
         self.agents["followup_questions"] = FollowupQuestionsAgent()
         
         logger.info("Agents registered", agent_ids=list(self.agents.keys()))
+    
+    async def create_processing_session(self,
+                                       session_id: str,
+                                       initial_status: str = "pending",
+                                       metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Create a new processing session for Firebase integration
+        
+        This method creates a session record that can be used to track processing
+        before the actual transcript processing begins. Used by Firebase integration
+        to create session first, then start processing asynchronously.
+        
+        Args:
+            session_id: Unique session identifier (provided by caller)
+            initial_status: Initial status for the session
+            metadata: Session metadata (chapter info, audio URLs, user preferences)
+            
+        Returns:
+            Session ID (same as input for confirmation)
+        """
+        # Store session information in pending sessions
+        session_info = {
+            "session_id": session_id,
+            "status": initial_status,
+            "created_at": datetime.now(),
+            "metadata": metadata or {},
+            "progress_percentage": 0.0,
+            "current_stage": ProcessingStage.INITIALIZATION.value,
+            "errors": []
+        }
+        
+        self.pending_sessions[session_id] = session_info
+        
+        logger.info("Processing session created",
+                   session_id=session_id,
+                   initial_status=initial_status,
+                   metadata_keys=list((metadata or {}).keys()))
+        
+        return session_id
+    
+    async def start_processing_from_session(self,
+                                          session_id: str,
+                                          transcript: str,
+                                          user_id: str,
+                                          user_preferences: Optional[Dict[str, Any]] = None,
+                                          progress_callback: Optional[Callable] = None) -> bool:
+        """
+        Start processing for a previously created session
+        
+        This method takes a session created with create_processing_session and
+        begins the actual transcript processing using the main pipeline.
+        
+        Args:
+            session_id: Existing session ID from create_processing_session
+            transcript: Raw transcript text to process
+            user_id: User identifier for the processing
+            user_preferences: Processing preferences
+            progress_callback: Optional callback for progress updates
+            
+        Returns:
+            True if processing started successfully, False otherwise
+        """
+        # Check if session exists in pending sessions
+        if session_id not in self.pending_sessions:
+            logger.error("Session not found in pending sessions", session_id=session_id)
+            return False
+        
+        # Get session metadata
+        pending_session = self.pending_sessions[session_id]
+        session_metadata = pending_session.get("metadata", {})
+        
+        # Merge user preferences from session metadata
+        merged_preferences = {**(session_metadata.get("user_preferences", {})), **(user_preferences or {})}
+        
+        # Create actual processing session
+        session = ProcessingSession(
+            session_id=session_id,
+            user_id=user_id,
+            transcript=transcript,
+            current_stage=ProcessingStage.INITIALIZATION,
+            start_time=datetime.now(),
+            last_checkpoint=datetime.now(),
+            progress_percentage=0.0,
+            results={"session_metadata": session_metadata},
+            errors=[],
+            user_preferences=merged_preferences
+        )
+        
+        # Move from pending to active
+        self.active_sessions[session_id] = session
+        del self.pending_sessions[session_id]
+        
+        # Add progress callback if provided
+        if progress_callback:
+            if session_id not in self.progress_callbacks:
+                self.progress_callbacks[session_id] = []
+            self.progress_callbacks[session_id].append(progress_callback)
+        
+        logger.info("Starting processing for existing session",
+                   session_id=session_id,
+                   user_id=user_id,
+                   transcript_length=len(transcript))
+        
+        # Start processing in background
+        asyncio.create_task(self._process_session(session))
+        
+        return True
     
     @log_performance(logger)
     async def process_transcript(self,
@@ -547,23 +655,40 @@ class AgentOrchestrator:
     
     async def get_session_status(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get current status of a processing session"""
+        # Check active and completed sessions first
         session = self.active_sessions.get(session_id) or self.completed_sessions.get(session_id)
         
-        if not session:
-            return None
+        if session:
+            return {
+                "session_id": session.session_id,
+                "user_id": session.user_id,
+                "current_stage": session.current_stage.value,
+                "progress_percentage": session.progress_percentage,
+                "start_time": session.start_time.isoformat(),
+                "last_checkpoint": session.last_checkpoint.isoformat(),
+                "estimated_completion": self._estimate_completion_time(session).isoformat() if self._estimate_completion_time(session) else None,
+                "results_preview": self._create_results_preview(session),
+                "errors": session.errors,
+                "is_completed": session.current_stage in [ProcessingStage.COMPLETED, ProcessingStage.FAILED]
+            }
         
-        return {
-            "session_id": session.session_id,
-            "user_id": session.user_id,
-            "current_stage": session.current_stage.value,
-            "progress_percentage": session.progress_percentage,
-            "start_time": session.start_time.isoformat(),
-            "last_checkpoint": session.last_checkpoint.isoformat(),
-            "estimated_completion": self._estimate_completion_time(session).isoformat() if self._estimate_completion_time(session) else None,
-            "results_preview": self._create_results_preview(session),
-            "errors": session.errors,
-            "is_completed": session.current_stage in [ProcessingStage.COMPLETED, ProcessingStage.FAILED]
-        }
+        # Check pending sessions (created but not started)
+        pending_session = self.pending_sessions.get(session_id)
+        if pending_session:
+            return {
+                "session_id": pending_session["session_id"],
+                "user_id": "pending",  # User ID not set until processing starts
+                "current_stage": pending_session["current_stage"],
+                "progress_percentage": pending_session["progress_percentage"],
+                "start_time": pending_session["created_at"].isoformat(),
+                "last_checkpoint": pending_session["created_at"].isoformat(),
+                "estimated_completion": None,
+                "results_preview": {"stage": "pending", "status": pending_session["status"]},
+                "errors": pending_session["errors"],
+                "is_completed": False
+            }
+        
+        return None
     
     async def get_session_results(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get complete results for a session"""
