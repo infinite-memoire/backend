@@ -1,4 +1,4 @@
-import logging_utils
+import logging
 import functools
 import time
 import traceback
