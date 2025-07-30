@@ -10,15 +10,12 @@ from pydantic import BaseModel, Field
 import asyncio
 from datetime import datetime
 
-from app.services.orchestrator import AgentOrchestrator
+from app.services.orchestrator import orchestrator
 from app.services.firestore import firestore_service
 from app.utils.logging_utils import get_logger, log_performance
 
 logger = get_logger("ai_processing_api")
 router = APIRouter(tags=["AI Processing"])
-
-# Global orchestrator instance
-orchestrator = AgentOrchestrator()
 
 # Request/Response Models
 class ProcessTranscriptRequest(BaseModel):

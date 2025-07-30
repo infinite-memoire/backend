@@ -67,7 +67,7 @@ class LoggingSettings(BaseSettings):
     # Logging Configuration
     level: str = Field("INFO", description="Logging level")
     format: str = Field("text", description="Log format: json or text")
-    file_path: Optional[str] = Field(None, description="Log file path")
+    file_path: Optional[str] = Field('app.log', description="Log file path")
     rotation_size: str = Field("10MB", description="Log file rotation size")
     retention_days: int = Field(30, description="Log retention period")
     

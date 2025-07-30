@@ -12,7 +12,7 @@ from datetime import datetime
 
 # Import existing services from the backend architecture
 from app.services.stt.whisper_service import WhisperSTTService
-from app.services.orchestrator import AgentOrchestrator
+from app.services.orchestrator import orchestrator
 from app.utils.logging_utils import get_logger
 
 # Configure logging
@@ -45,7 +45,7 @@ class ProcessFromFirebaseResponse(BaseModel):
 class FirebaseAudioProcessor:
     def __init__(self):
         self.stt_service = WhisperSTTService()
-        self.orchestrator = AgentOrchestrator()
+        self.orchestrator = orchestrator  # Use global orchestrator instance
         self.temp_dir = Path(tempfile.gettempdir()) / "infinite_memoire_audio"
         self.temp_dir.mkdir(exist_ok=True)
     
