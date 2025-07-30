@@ -27,18 +27,30 @@ class AppLogger:
     
     def _log(self, level: int, message: str, **kwargs):
         """Internal logging method with structured data"""
-        # For text logging, format kwargs as readable key=value pairs
-        if kwargs:
-            formatted_data = ", ".join([f"{k}={v}" for k, v in kwargs.items()])
-            message = f"{message} | {formatted_data}"
+        try:
+            # Import here to avoid circular imports
+            from app.config.logging_config import get_current_logging_format
+            current_format = get_current_logging_format()
+        except ImportError:
+            # Fallback if config not available
+            current_format = "text"
         
         extra = {
             'component': self.logger.name
         }
-        # Add kwargs directly to extra for JSON logging compatibility
-        extra.update(kwargs)
         
-        self.logger.log(level, message, extra=extra)
+        if current_format == "json":
+            # For JSON logging, add kwargs to extra and keep message clean
+            extra.update(kwargs)
+            self.logger.log(level, message, extra=extra)
+        else:
+            # For text logging, format kwargs as readable key=value pairs in message
+            if kwargs:
+                formatted_data = ", ".join([f"{k}={v}" for k, v in kwargs.items()])
+                message = f"{message} | {formatted_data}"
+            
+            # Only add component to extra for text logging
+            self.logger.log(level, message, extra=extra)
 
 def get_logger(name: str) -> AppLogger:
     """Get application logger for a specific component"""

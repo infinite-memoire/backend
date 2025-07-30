@@ -111,11 +111,17 @@ def _setup_text_logging(settings):
     console_handler.setFormatter(formatter)
     console_handler.setLevel(getattr(logging, settings.logging.level))
     
+    # Clear existing handlers and force our configuration
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    
     logging.basicConfig(
         level=getattr(logging, settings.logging.level),
         handlers=[console_handler],
         force=True
     )
+    
+    print(f"Text logging configured. Format: {formatter._fmt}, Level: {settings.logging.level}")  # Debug print
 
 def _setup_request_context():
     """Setup request context for logging"""
