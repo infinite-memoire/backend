@@ -14,7 +14,7 @@ from app.models.publishing import (
     PublicationMetadata, PublicationSettings, PublicationStatus,
     PublicationVisibility, PublishingWorkflow
 )
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("publishing_service")
 

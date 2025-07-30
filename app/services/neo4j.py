@@ -1,6 +1,6 @@
 from neo4j import GraphDatabase
-from app.config.settings import get_settings
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.utils.logging_utils import get_logger
 import asyncio
 from typing import Dict, List, Optional
 

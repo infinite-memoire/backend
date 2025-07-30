@@ -12,7 +12,7 @@ import jwt
 from datetime import datetime, timedelta
 import os
 
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 from app.utils.exceptions import AuthenticationError, AuthorizationError
 
 logger = get_logger("auth")

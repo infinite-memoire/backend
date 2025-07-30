@@ -1,5 +1,5 @@
-from app.config.settings import get_settings
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.utils.logging_utils import get_logger
 import mimetypes
 from typing import Tuple, Optional
 

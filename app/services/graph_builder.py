@@ -12,9 +12,9 @@ import networkx as nx
 from neo4j import GraphDatabase, basic_auth
 import json
 from collections import Counter, defaultdict
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 from .semantic_chunker import SemanticChunk
-from ..config.settings import get_settings
+from ..config.settings_config import get_settings
 
 logger = get_logger("graph_builder")
 

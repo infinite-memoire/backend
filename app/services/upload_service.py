@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from app.services.firestore import FirestoreService
 from app.models.upload_session import UploadSession, ChunkInfo, UploadStatus
-from app.utils.logging import get_logger, log_performance
-from app.config.settings import get_settings
+from app.utils.logging_utils import get_logger, log_performance
+from app.config.settings_config import get_settings
 import hashlib
 
 logger = get_logger("upload_service")

@@ -11,7 +11,7 @@ import spacy
 from spacy.tokens import Doc
 import re
 from datetime import datetime
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 
 logger = get_logger("semantic_chunker")
 

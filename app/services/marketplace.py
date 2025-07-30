@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 
 from app.models.publishing import PublicationVisibility
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("marketplace_service")
 

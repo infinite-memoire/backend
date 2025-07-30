@@ -5,8 +5,8 @@ import asyncio
 import numpy as np
 import librosa
 import time
-from app.utils.logging import get_logger, log_performance
-from app.config.settings import get_settings
+from app.utils.logging_utils import get_logger, log_performance
+from app.config.settings_config import get_settings
 
 logger = get_logger("wav2vec2_service")
 

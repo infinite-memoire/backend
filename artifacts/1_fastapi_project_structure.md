@@ -49,8 +49,8 @@ backend/
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config.settings import get_settings
-from app.config.app_logging import setup_logging
+from app.config.settings_config import get_settings
+from app.config.logging_config import setup_logging
 from app.api.routes import audio, transcripts, health
 
 
@@ -120,30 +120,32 @@ def get_settings() -> Settings:
 ### 3. Database Services
 
 #### Firestore Service (services/firestore.py)
+
 ```python
 from google.cloud import firestore
-from app.config.settings import get_settings
+from app.config.settings_config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class FirestoreService:
     def __init__(self):
         settings = get_settings()
         self.db = firestore.Client(project=settings.firestore_project_id)
-        
+
     async def create_audio_record(self, audio_data: dict) -> str:
         doc_ref = self.db.collection('audio_files').document()
         doc_ref.set(audio_data)
         logger.info(f"Created audio record: {doc_ref.id}")
         return doc_ref.id
-        
+
     async def create_transcript_record(self, transcript_data: dict) -> str:
         doc_ref = self.db.collection('transcripts').document()
         doc_ref.set(transcript_data)
         logger.info(f"Created transcript record: {doc_ref.id}")
         return doc_ref.id
-        
+
     async def get_audio_record(self, audio_id: str) -> dict:
         doc_ref = self.db.collection('audio_files').document(audio_id)
         doc = doc_ref.get()
@@ -151,12 +153,14 @@ class FirestoreService:
 ```
 
 #### Neo4j Service (services/neo4j.py)
+
 ```python
 from neo4j import GraphDatabase
-from app.config.settings import get_settings
+from app.config.settings_config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class Neo4jService:
     def __init__(self):
@@ -165,16 +169,16 @@ class Neo4jService:
             settings.neo4j_uri,
             auth=(settings.neo4j_user, settings.neo4j_password)
         )
-        
+
     def close(self):
         self.driver.close()
-        
+
     async def create_story_node(self, node_data: dict) -> str:
         with self.driver.session() as session:
             result = session.write_transaction(self._create_node, node_data)
             logger.info(f"Created story node: {result}")
             return result
-            
+
     @staticmethod
     def _create_node(tx, node_data):
         query = """

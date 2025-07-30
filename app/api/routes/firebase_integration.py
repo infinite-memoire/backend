@@ -7,16 +7,16 @@ from typing import List, Optional, Dict, Any
 import requests
 import tempfile
 import uuid
-import logging
 from pathlib import Path
 from datetime import datetime
 
 # Import existing services from the backend architecture
 from app.services.stt.whisper_service import WhisperSTTService
 from app.services.orchestrator import AgentOrchestrator
+from app.utils.logging_utils import get_logger
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["firebase-integration"])
 

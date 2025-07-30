@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from google.cloud import firestore
 from app.models.content import BookModel, ChapterModel, ContentMetadata
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 import asyncio
 import json
 

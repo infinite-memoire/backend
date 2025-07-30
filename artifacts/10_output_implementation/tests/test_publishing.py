@@ -482,7 +482,7 @@ class TestPublishingAPI:
         # Import here to avoid circular imports in test setup
         from app.api.routes.publishing import start_publishing_workflow
         from app.dependencies import get_services
-        from app.utils.auth import get_current_user
+        from app.utils.auth_utils import get_current_user
         
         # Mock dependencies
         def mock_get_services():

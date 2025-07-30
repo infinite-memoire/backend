@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from app.config.settings import get_settings
-from app.config.app_logging import setup_logging
-from app.config.validation import validate_configuration
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.config.logging_config import setup_logging
+from app.config.validation_config import validate_configuration
+from app.utils.logging_utils import get_logger
 from app.middleware.logging import LoggingMiddleware
 
 # Setup logging first

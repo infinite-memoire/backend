@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 from datetime import datetime
 import sys
 

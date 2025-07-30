@@ -1,8 +1,12 @@
 import logging
 import logging.config
 from pathlib import Path
-from pythonjsonlogger import jsonlogger
-from app.config.settings import get_settings
+try:
+    from pythonjsonlogger import jsonlogger
+except ImportError:
+    # Fallback if pythonjsonlogger is not available
+    jsonlogger = None
+from app.config.settings_config import get_settings
 import sys
 import contextvars
 
@@ -26,6 +30,11 @@ def setup_logging():
 
 def _setup_json_logging(settings):
     """Setup JSON structured logging"""
+    
+    if jsonlogger is None:
+        # Fallback to text logging if jsonlogger is not available
+        _setup_text_logging(settings)
+        return
     
     formatter = jsonlogger.JsonFormatter(
         fmt='%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d',
@@ -67,9 +76,35 @@ def _setup_json_logging(settings):
 def _setup_text_logging(settings):
     """Setup text-based logging for development"""
     
-    formatter = logging.Formatter(
-        fmt='%(asctime)s | %(name)-20s | %(levelname)-8s | %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+    class ColoredFormatter(logging.Formatter):
+        """Custom formatter with colors and better structure"""
+        
+        COLORS = {
+            'DEBUG': '\033[36m',    # Cyan
+            'INFO': '\033[32m',     # Green
+            'WARNING': '\033[33m',  # Yellow
+            'ERROR': '\033[31m',    # Red
+            'CRITICAL': '\033[35m', # Magenta
+        }
+        RESET = '\033[0m'
+        
+        def format(self, record):
+            # Add color to log level
+            if hasattr(record, 'levelname'):
+                color = self.COLORS.get(record.levelname, '')
+                record.colored_levelname = f"{color}{record.levelname}{self.RESET}"
+            else:
+                record.colored_levelname = record.levelname
+            
+            # Format component name
+            component = getattr(record, 'component', record.name)
+            record.short_component = component.split('.')[-1][:15]  # Last part, max 15 chars
+            
+            return super().format(record)
+    
+    formatter = ColoredFormatter(
+        fmt='%(asctime)s | %(short_component)-15s | %(colored_levelname)-8s | %(message)s',
+        datefmt='%H:%M:%S'
     )
     
     console_handler = logging.StreamHandler(sys.stdout)

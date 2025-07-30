@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.services.upload_service import upload_service
 from app.utils.upload_validation import file_validator
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 
 router = APIRouter(tags=["upload"])
 logger = get_logger("upload_api")

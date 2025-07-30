@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional, Callable, Any, Union
 import asyncio
 from enum import Enum
-from app.utils.logging import get_logger, log_performance
-from app.config.settings import get_settings
+from app.utils.logging_utils import get_logger, log_performance
+from app.config.settings_config import get_settings
 
 logger = get_logger("stt_manager")
 

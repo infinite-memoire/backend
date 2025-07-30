@@ -8,7 +8,7 @@ from typing import Dict, List, Any
 from pathlib import Path
 import jinja2
 
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("html_conversion")
 

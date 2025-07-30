@@ -11,7 +11,7 @@ import re
 import numpy as np
 from abc import ABC, abstractmethod
 from anthropic import Anthropic
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 from .graph_builder import StorylineNode
 
 logger = get_logger("agents")

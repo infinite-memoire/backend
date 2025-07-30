@@ -11,7 +11,7 @@ from app.services.content_storage import ContentStorageService
 from app.services.publishing import PublishingWorkflowService, PublicationValidator
 from app.services.html_conversion import HTMLConversionService
 from app.services.marketplace import MarketplaceService
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("dependencies")
 

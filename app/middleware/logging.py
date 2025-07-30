@@ -4,7 +4,7 @@ import contextvars
 from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 # Request ID context variable
 request_id_var = contextvars.ContextVar('request_id', default=None)

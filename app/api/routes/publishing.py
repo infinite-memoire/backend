@@ -20,8 +20,8 @@ from app.models.publishing import (
     PublicationMetadata, PublicationSettings, PublicationStatus,
     PublicationVisibility, PublishingWorkflow
 )
-from app.utils.auth import get_current_user, User
-from app.utils.logging import get_logger, log_performance
+from app.utils.auth_utils import get_current_user, User
+from app.utils.logging_utils import get_logger, log_performance
 from app.utils.exceptions import ValidationError, PublishingError
 from app.dependencies import get_services
 

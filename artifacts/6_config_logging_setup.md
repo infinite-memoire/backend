@@ -189,48 +189,51 @@ tasks:
 ## 2. Logging System Implementation
 ### 2.1 Structured Logging Setup
 #### 2.1.1 Logger Configuration
+
 ```python
 # app/config/logging.py
 import logging
 import logging.config
 from pathlib import Path
 from pythonjsonlogger import jsonlogger
-from app.config.settings import get_settings
+from app.config.settings_config import get_settings
 import sys
+
 
 def setup_logging():
     """Setup application logging configuration"""
     settings = get_settings()
-    
+
     # Create logs directory if it doesn't exist
     if settings.logging.file_path:
         log_file = Path(settings.logging.file_path)
         log_file.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Configure logging
     if settings.logging.format == "json":
         _setup_json_logging(settings)
     else:
         _setup_text_logging(settings)
-    
+
     # Set up request ID context
     _setup_request_context()
 
+
 def _setup_json_logging(settings):
     """Setup JSON structured logging"""
-    
+
     formatter = jsonlogger.JsonFormatter(
         fmt='%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     console_handler.setLevel(getattr(logging, settings.logging.level))
-    
+
     handlers = [console_handler]
-    
+
     # File handler if configured
     if settings.logging.file_path:
         from logging.handlers import RotatingFileHandler
@@ -242,7 +245,7 @@ def _setup_json_logging(settings):
         file_handler.setFormatter(formatter)
         file_handler.setLevel(getattr(logging, settings.logging.level))
         handlers.append(file_handler)
-    
+
     # Configure root logger
     logging.basicConfig(
         level=getattr(logging, settings.logging.level),
@@ -250,31 +253,33 @@ def _setup_json_logging(settings):
         force=True
     )
 
+
 def _setup_text_logging(settings):
     """Setup text-based logging for development"""
-    
+
     formatter = logging.Formatter(
         fmt='%(asctime)s | %(name)-20s | %(levelname)-8s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    
+
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     console_handler.setLevel(getattr(logging, settings.logging.level))
-    
+
     logging.basicConfig(
         level=getattr(logging, settings.logging.level),
         handlers=[console_handler],
         force=True
     )
 
+
 def _setup_request_context():
     """Setup request context for logging"""
     import contextvars
-    
+
     # Request ID context variable
     request_id_var = contextvars.ContextVar('request_id', default=None)
-    
+
     # Custom formatter that includes request ID
     class RequestContextFormatter(logging.Formatter):
         def format(self, record):
@@ -284,8 +289,9 @@ def _setup_request_context():
             else:
                 record.request_id = "no-request"
             return super().format(record)
-    
+
     return request_id_var
+
 
 def _parse_size(size_str: str) -> int:
     """Parse size string like '10MB' to bytes"""
@@ -401,193 +407,200 @@ def log_performance(logger: AppLogger):
 
 ### 2.2 Service-Specific Logging
 #### 2.2.1 Database Operation Logging
+
 ```python
 # app/services/firestore.py (logging integration)
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 
 logger = get_logger("firestore")
+
 
 class FirestoreService:
     def __init__(self):
         self.db = firestore.Client(project=settings.firestore_project_id)
         logger.info("Firestore service initialized", project_id=settings.firestore_project_id)
-    
+
     @log_performance(logger)
     async def create_audio_record(self, audio_data: dict) -> str:
         try:
             doc_ref = self.db.collection('audio_files').document()
             doc_ref.set(audio_data)
-            
+
             logger.info("Audio record created",
-                       document_id=doc_ref.id,
-                       collection="audio_files",
-                       filename=audio_data.get("filename"),
-                       file_size=audio_data.get("file_size_bytes"))
-            
-            return doc_ref.id
-            
-        except Exception as e:
-            logger.error("Failed to create audio record",
+                        document_id=doc_ref.id,
                         collection="audio_files",
                         filename=audio_data.get("filename"),
-                        error_type=type(e).__name__,
-                        error_message=str(e))
+                        file_size=audio_data.get("file_size_bytes"))
+
+            return doc_ref.id
+
+        except Exception as e:
+            logger.error("Failed to create audio record",
+                         collection="audio_files",
+                         filename=audio_data.get("filename"),
+                         error_type=type(e).__name__,
+                         error_message=str(e))
             raise
-    
+
     @log_performance(logger)
     async def get_audio_record(self, audio_id: str) -> dict:
         try:
             doc_ref = self.db.collection('audio_files').document(audio_id)
             doc = doc_ref.get()
-            
+
             exists = doc.exists
             logger.debug("Audio record retrieved",
-                        document_id=audio_id,
-                        collection="audio_files",
-                        exists=exists)
-            
+                         document_id=audio_id,
+                         collection="audio_files",
+                         exists=exists)
+
             return doc.to_dict() if exists else None
-            
+
         except Exception as e:
             logger.error("Failed to retrieve audio record",
-                        document_id=audio_id,
-                        collection="audio_files",
-                        error_type=type(e).__name__,
-                        error_message=str(e))
+                         document_id=audio_id,
+                         collection="audio_files",
+                         error_type=type(e).__name__,
+                         error_message=str(e))
             raise
 ```
 
 #### 2.2.2 Background Task Logging
+
 ```python
 # app/services/background_tasks.py (logging integration)
-from app.utils.logging import get_logger, log_performance
+from app.utils.logging_utils import get_logger, log_performance
 
 logger = get_logger("background_tasks")
+
 
 class BackgroundTaskManager:
     @log_performance(logger)
     async def create_task(self, task_type: TaskType, task_function: Callable, **kwargs) -> str:
         task_id = str(uuid.uuid4())
-        
+
         logger.info("Background task created",
-                   task_id=task_id,
-                   task_type=task_type.value,
-                   function_name=task_function.__name__,
-                   metadata=kwargs.get("metadata", {}))
-        
+                    task_id=task_id,
+                    task_type=task_type.value,
+                    function_name=task_function.__name__,
+                    metadata=kwargs.get("metadata", {}))
+
         # ... task creation logic
-        
+
         return task_id
-    
+
     @log_performance(logger)
     async def _execute_task(self, task_id: str, task_function: Callable, *args, **kwargs):
         logger.info("Task execution started",
-                   task_id=task_id,
-                   function_name=task_function.__name__)
-        
+                    task_id=task_id,
+                    function_name=task_function.__name__)
+
         try:
             result = await task_function(task_id, *args, **kwargs)
-            
+
             logger.info("Task execution completed successfully",
-                       task_id=task_id,
-                       function_name=task_function.__name__,
-                       result_size=len(str(result)) if result else 0)
-            
-            return result
-            
-        except Exception as e:
-            logger.error("Task execution failed",
                         task_id=task_id,
                         function_name=task_function.__name__,
-                        error_type=type(e).__name__,
-                        error_message=str(e),
-                        traceback=traceback.format_exc())
+                        result_size=len(str(result)) if result else 0)
+
+            return result
+
+        except Exception as e:
+            logger.error("Task execution failed",
+                         task_id=task_id,
+                         function_name=task_function.__name__,
+                         error_type=type(e).__name__,
+                         error_message=str(e),
+                         traceback=traceback.format_exc())
             raise
 ```
 
 ## 3. Configuration Loading and Validation
 ### 3.1 Configuration Loader
+
 ```python
 # app/config/loader.py
 import yaml
 from pathlib import Path
 from typing import Dict, Any
 import os
-from app.utils.logging import get_logger
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("config")
 
+
 class ConfigurationLoader:
     """Load and merge configuration from multiple sources"""
-    
+
     def __init__(self, config_dir: str = "config"):
         self.config_dir = Path(config_dir)
         self.environment = os.getenv("ENVIRONMENT", "development")
-        
+
     def load_configuration(self) -> Dict[str, Any]:
         """Load configuration with environment-specific overrides"""
-        
+
         # Load base configuration
         base_config = self._load_yaml_file("config.yaml")
         logger.info("Loaded base configuration", file="config.yaml")
-        
+
         # Load environment-specific configuration
         env_config_file = f"config-{self.environment}.yaml"
         env_config = self._load_yaml_file(env_config_file)
-        
+
         if env_config:
             logger.info("Loaded environment configuration",
-                       environment=self.environment,
-                       file=env_config_file)
+                        environment=self.environment,
+                        file=env_config_file)
             base_config = self._merge_configs(base_config, env_config)
         else:
             logger.warning("No environment-specific configuration found",
-                          environment=self.environment,
-                          expected_file=env_config_file)
-        
+                           environment=self.environment,
+                           expected_file=env_config_file)
+
         # Apply environment variable overrides
         config_with_env = self._apply_env_overrides(base_config)
-        
+
         logger.info("Configuration loaded successfully",
-                   environment=self.environment,
-                   config_keys=list(config_with_env.keys()))
-        
+                    environment=self.environment,
+                    config_keys=list(config_with_env.keys()))
+
         return config_with_env
-    
+
     def _load_yaml_file(self, filename: str) -> Dict[str, Any]:
         """Load YAML configuration file"""
         file_path = self.config_dir / filename
-        
+
         if not file_path.exists():
             return {}
-        
+
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
             logger.error("Failed to load configuration file",
-                        file=filename,
-                        error_type=type(e).__name__,
-                        error_message=str(e))
+                         file=filename,
+                         error_type=type(e).__name__,
+                         error_message=str(e))
             return {}
-    
+
     def _merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge configuration dictionaries"""
         result = base.copy()
-        
+
         for key, value in override.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._merge_configs(result[key], value)
             else:
                 result[key] = value
-        
+
         return result
-    
+
     def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Apply environment variable overrides"""
         # This would implement environment variable override logic
         # For now, return config as-is since Pydantic BaseSettings handles this
         return config
+
 
 # Global configuration loader
 config_loader = ConfigurationLoader()
@@ -597,8 +610,8 @@ config_loader = ConfigurationLoader()
 
 ```python
 # app/config/validation.py
-from app.config.settings import get_settings
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.utils.logging_utils import get_logger
 import sys
 
 logger = get_logger("config_validation")
@@ -685,10 +698,10 @@ def _validate_task_config(task_config):
 ```python
 # app/main.py (enhanced with configuration and logging)
 from fastapi import FastAPI
-from app.config.settings import get_settings
-from app.config.app_logging import setup_logging
-from app.config.validation import validate_configuration
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.config.logging_config import setup_logging
+from app.config.validation_config import validate_configuration
+from app.utils.logging_utils import get_logger
 
 # Setup logging first
 setup_logging()

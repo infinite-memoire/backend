@@ -1,7 +1,7 @@
 from celery import Celery
 from celery.signals import worker_ready, worker_shutdown
-from app.config.settings import get_settings
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.utils.logging_utils import get_logger
 import os
 
 logger = get_logger("celery_app")

@@ -1,8 +1,8 @@
 """Configuration validation module"""
 import os
 from pathlib import Path
-from app.config.settings import get_settings
-from app.utils.logging import get_logger
+from app.config.settings_config import get_settings
+from app.utils.logging_utils import get_logger
 
 logger = get_logger("config.validation")
 

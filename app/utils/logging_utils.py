@@ -1,5 +1,4 @@
-import logging
-from typing import Dict, Any
+import logging_utils
 import functools
 import time
 import traceback
@@ -28,10 +27,17 @@ class AppLogger:
     
     def _log(self, level: int, message: str, **kwargs):
         """Internal logging method with structured data"""
+        # For text logging, format kwargs as readable key=value pairs
+        if kwargs:
+            formatted_data = ", ".join([f"{k}={v}" for k, v in kwargs.items()])
+            message = f"{message} | {formatted_data}"
+        
         extra = {
-            'component': self.logger.name,
-            'data': kwargs
+            'component': self.logger.name
         }
+        # Add kwargs directly to extra for JSON logging compatibility
+        extra.update(kwargs)
+        
         self.logger.log(level, message, extra=extra)
 
 def get_logger(name: str) -> AppLogger:
