@@ -50,7 +50,7 @@ async def initiate_upload(request: InitiateUploadRequest):
         
         # Generate upload URLs for each chunk
         upload_urls = [
-            f"/api/v1/upload/chunk/{session.upload_id}/{i}"
+            f"/api/upload/chunk/{session.upload_id}/{i}"
             for i in range(session.total_chunks)
         ]
         

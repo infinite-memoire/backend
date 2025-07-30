@@ -88,7 +88,7 @@ class AgentOrchestrator:
         """
         # Initialize core services
         self.semantic_chunker = SemanticChunker()
-        self.graph_builder = GraphBuilder(neo4j_uri, neo4j_user, neo4j_password)
+        self.graph_builder = GraphBuilder()
         
         # Initialize agents
         self.agents: Dict[str, BaseAgent] = {}

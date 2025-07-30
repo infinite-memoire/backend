@@ -26,7 +26,7 @@ from app.utils.exceptions import ValidationError, PublishingError
 from app.dependencies import get_services
 
 logger = get_logger("publishing_api")
-router = APIRouter(tags=["Publishing"], prefix="/api/v1/publishing")
+router = APIRouter(tags=["Publishing"], prefix="/api/publishing")
 
 
 # Request/Response Models

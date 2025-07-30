@@ -27,7 +27,7 @@ class ApplicationSettings(BaseSettings):
     environment: str = Field("development", description="Environment name")
     
     # API Configuration
-    api_prefix: str = Field("/api/v1", description="API route prefix")
+    api_prefix: str = Field("/api", description="API route prefix")
     docs_url: str = Field("/docs", description="API documentation URL")
     redoc_url: str = Field("/redoc", description="ReDoc documentation URL")
     
@@ -87,6 +87,7 @@ class Settings(BaseSettings):
         # Use absolute path to .env file relative to the backend directory
         env_file = Path(__file__).parent.parent.parent / ".env"
         env_file_encoding = "utf-8"
+        extra = "allow"
 
 # Global settings instance
 _settings = None

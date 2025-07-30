@@ -1,15 +1,19 @@
 from google.cloud import firestore
 from app.config.settings import get_settings
 from app.utils.logging import get_logger
-import asyncio
-from typing import Dict, Optional, List, Tuple, Any
+import firebase_admin
+from firebase_admin import credentials
+from typing import Optional, List, Tuple, Any
 
 logger = get_logger(__name__)
 
 class FirestoreService:
     def __init__(self):
         settings = get_settings()
-        
+        #
+        # cred = credentials.Certificate("path/to/serviceAccountKey.json")
+        # firebase_admin.initialize_app(cred)
+
         # Initialize Firestore client
         if settings.database.firestore_emulator_host:
             # Use emulator for development

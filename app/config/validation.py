@@ -22,7 +22,7 @@ def validate_configuration():
     _validate_upload_config(settings.upload)
     
     # Validate task configuration
-    _validate_task_config(settings.tasks)
+    _validate_task_config(settings.task)
     
     logger.info("Configuration validation completed successfully")
 
@@ -53,17 +53,17 @@ def _validate_logging_config(log_settings):
     
     # Validate log level
     valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    if log_settings.log_level.upper() not in valid_levels:
-        raise ValueError(f"Invalid log level: {log_settings.log_level}. Must be one of {valid_levels}")
+    if log_settings.level.upper() not in valid_levels:
+        raise ValueError(f"Invalid log level: {log_settings.level}. Must be one of {valid_levels}")
     
     # Validate log format
     valid_formats = ["json", "text"]
-    if log_settings.log_format not in valid_formats:
-        raise ValueError(f"Invalid log format: {log_settings.log_format}. Must be one of {valid_formats}")
+    if log_settings.format not in valid_formats:
+        raise ValueError(f"Invalid log format: {log_settings.format}. Must be one of {valid_formats}")
     
     # Check log file directory (if specified)
-    if log_settings.log_file_path:
-        log_file = Path(log_settings.log_file_path)
+    if log_settings.file_path:
+        log_file = Path(log_settings.file_path)
         log_dir = log_file.parent
         
         # Create directory if it doesn't exist
@@ -105,7 +105,7 @@ def _validate_task_config(task_settings):
     logger.debug("Validating task configuration")
     
     # Validate timeout
-    if task_settings.task_timeout_seconds <= 0:
+    if task_settings.timeout_seconds <= 0:
         raise ValueError("Task timeout must be positive")
     
     # Validate concurrency limits
@@ -113,11 +113,11 @@ def _validate_task_config(task_settings):
         raise ValueError("Maximum concurrent tasks must be positive")
     
     # Validate retry attempts
-    if task_settings.task_retry_attempts < 0:
+    if task_settings.retry_attempts < 0:
         raise ValueError("Task retry attempts cannot be negative")
     
     # Validate cleanup interval
-    if task_settings.task_cleanup_interval_hours <= 0:
+    if task_settings.cleanup_interval_hours <= 0:
         raise ValueError("Task cleanup interval must be positive")
     
     logger.debug("Task configuration validated")

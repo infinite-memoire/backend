@@ -13,6 +13,7 @@ class Neo4jService:
             settings.database.neo4j_uri,
             auth=(settings.database.neo4j_user, settings.database.neo4j_password)
         )
+        self.driver.verify_connectivity()
         logger.info("Neo4j driver initialized", uri=settings.database.neo4j_uri)
         
     def close(self):
@@ -39,7 +40,7 @@ class Neo4jService:
         """Create a story node in the graph"""
         try:
             with self.driver.session() as session:
-                result = session.write_transaction(self._create_node, node_data)
+                result = session.execute_write(self._create_node, node_data)
                 logger.info("Created story node", node_id=result)
                 return result
         except Exception as e:
@@ -66,7 +67,7 @@ class Neo4jService:
         """Create a relationship between two nodes"""
         try:
             with self.driver.session() as session:
-                result = session.write_transaction(
+                result = session.execute_write(
                     self._create_relationship, 
                     from_node_id, to_node_id, relationship_type, properties or {}
                 )
@@ -103,7 +104,7 @@ class Neo4jService:
         """Get a story node by ID"""
         try:
             with self.driver.session() as session:
-                result = session.read_transaction(self._get_node, node_id)
+                result = session.execute_read(self._get_node, node_id)
                 if result:
                     logger.debug("Retrieved story node", node_id=node_id)
                 else:
@@ -130,7 +131,7 @@ class Neo4jService:
         """Get all nodes connected to a given node"""
         try:
             with self.driver.session() as session:
-                result = session.read_transaction(self._get_connected_nodes, node_id)
+                result = session.execute_read(self._get_connected_nodes, node_id)
                 logger.debug("Retrieved connected nodes", 
                            node_id=node_id, 
                            connected_count=len(result))
@@ -156,7 +157,7 @@ class Neo4jService:
         """Delete a story node and all its relationships"""
         try:
             with self.driver.session() as session:
-                result = session.write_transaction(self._delete_node, node_id)
+                result = session.execute_write(self._delete_node, node_id)
                 logger.info("Deleted story node", node_id=node_id)
                 return result
         except Exception as e:

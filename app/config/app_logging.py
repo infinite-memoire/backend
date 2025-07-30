@@ -11,12 +11,12 @@ def setup_logging():
     settings = get_settings()
     
     # Create logs directory if it doesn't exist
-    if hasattr(settings.logging, 'log_file_path') and settings.logging.log_file_path:
-        log_file = Path(settings.logging.log_file_path)
+    if hasattr(settings.logging, 'log_file_path') and settings.logging.file_path:
+        log_file = Path(settings.logging.file_path)
         log_file.parent.mkdir(parents=True, exist_ok=True)
     
     # Configure logging
-    if settings.logging.log_format == "json":
+    if settings.logging.format == "json":
         _setup_json_logging(settings)
     else:
         _setup_text_logging(settings)
@@ -35,31 +35,31 @@ def _setup_json_logging(settings):
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(getattr(logging, settings.logging.log_level))
+    console_handler.setLevel(getattr(logging, settings.logging.level))
     
     handlers = [console_handler]
     
     # File handler if configured
-    if hasattr(settings.logging, 'log_file_path') and settings.logging.log_file_path:
+    if hasattr(settings.logging, 'log_file_path') and settings.logging.file_path:
         from logging.handlers import RotatingFileHandler
         
         # Default rotation size if not specified
         rotation_size = "10MB"
         if hasattr(settings.logging, 'log_rotation_size'):
-            rotation_size = settings.logging.log_rotation_size
+            rotation_size = settings.logging.rotation_size
             
         file_handler = RotatingFileHandler(
-            settings.logging.log_file_path,
+            settings.logging.file_path,
             maxBytes=_parse_size(rotation_size),
             backupCount=5
         )
         file_handler.setFormatter(formatter)
-        file_handler.setLevel(getattr(logging, settings.logging.log_level))
+        file_handler.setLevel(getattr(logging, settings.logging.level))
         handlers.append(file_handler)
     
     # Configure root logger
     logging.basicConfig(
-        level=getattr(logging, settings.logging.log_level),
+        level=getattr(logging, settings.logging.level),
         handlers=handlers,
         force=True
     )
@@ -74,10 +74,10 @@ def _setup_text_logging(settings):
     
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(getattr(logging, settings.logging.log_level))
+    console_handler.setLevel(getattr(logging, settings.logging.level))
     
     logging.basicConfig(
-        level=getattr(logging, settings.logging.log_level),
+        level=getattr(logging, settings.logging.level),
         handlers=[console_handler],
         force=True
     )

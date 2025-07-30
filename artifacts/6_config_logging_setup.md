@@ -203,12 +203,12 @@ def setup_logging():
     settings = get_settings()
     
     # Create logs directory if it doesn't exist
-    if settings.logging.log_file_path:
-        log_file = Path(settings.logging.log_file_path)
+    if settings.logging.file_path:
+        log_file = Path(settings.logging.file_path)
         log_file.parent.mkdir(parents=True, exist_ok=True)
     
     # Configure logging
-    if settings.logging.log_format == "json":
+    if settings.logging.format == "json":
         _setup_json_logging(settings)
     else:
         _setup_text_logging(settings)
@@ -227,25 +227,25 @@ def _setup_json_logging(settings):
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(getattr(logging, settings.logging.log_level))
+    console_handler.setLevel(getattr(logging, settings.logging.level))
     
     handlers = [console_handler]
     
     # File handler if configured
-    if settings.logging.log_file_path:
+    if settings.logging.file_path:
         from logging.handlers import RotatingFileHandler
         file_handler = RotatingFileHandler(
-            settings.logging.log_file_path,
-            maxBytes=_parse_size(settings.logging.log_rotation_size),
+            settings.logging.file_path,
+            maxBytes=_parse_size(settings.logging.rotation_size),
             backupCount=5
         )
         file_handler.setFormatter(formatter)
-        file_handler.setLevel(getattr(logging, settings.logging.log_level))
+        file_handler.setLevel(getattr(logging, settings.logging.level))
         handlers.append(file_handler)
     
     # Configure root logger
     logging.basicConfig(
-        level=getattr(logging, settings.logging.log_level),
+        level=getattr(logging, settings.logging.level),
         handlers=handlers,
         force=True
     )
@@ -260,10 +260,10 @@ def _setup_text_logging(settings):
     
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(getattr(logging, settings.logging.log_level))
+    console_handler.setLevel(getattr(logging, settings.logging.level))
     
     logging.basicConfig(
-        level=getattr(logging, settings.logging.log_level),
+        level=getattr(logging, settings.logging.level),
         handlers=[console_handler],
         force=True
     )
@@ -594,6 +594,7 @@ config_loader = ConfigurationLoader()
 ```
 
 ### 3.2 Configuration Validation
+
 ```python
 # app/config/validation.py
 from app.config.settings import get_settings
@@ -602,76 +603,80 @@ import sys
 
 logger = get_logger("config_validation")
 
+
 def validate_configuration():
     """Validate application configuration on startup"""
-    
+
     try:
         settings = get_settings()
-        
+
         # Validate database settings
         _validate_database_config(settings.database)
-        
+
         # Validate upload settings
         _validate_upload_config(settings.upload)
-        
+
         # Validate task settings
-        _validate_task_config(settings.tasks)
-        
+        _validate_task_config(settings.task)
+
         logger.info("Configuration validation successful",
-                   environment=settings.app.environment)
-        
+                    environment=settings.app.environment)
+
     except Exception as e:
         logger.error("Configuration validation failed",
-                    error_type=type(e).__name__,
-                    error_message=str(e))
+                     error_type=type(e).__name__,
+                     error_message=str(e))
         sys.exit(1)
+
 
 def _validate_database_config(db_config):
     """Validate database configuration"""
-    
+
     # Validate Firestore
     if not db_config.firestore_project_id:
         raise ValueError("Firestore project ID is required")
-    
+
     # Validate Neo4j
     if not db_config.neo4j_uri:
         raise ValueError("Neo4j URI is required")
-    
+
     if not db_config.neo4j_password:
         raise ValueError("Neo4j password is required")
-    
+
     logger.debug("Database configuration valid",
-                firestore_project=db_config.firestore_project_id,
-                neo4j_uri=db_config.neo4j_uri)
+                 firestore_project=db_config.firestore_project_id,
+                 neo4j_uri=db_config.neo4j_uri)
+
 
 def _validate_upload_config(upload_config):
     """Validate upload configuration"""
-    
+
     if upload_config.max_upload_size_mb <= 0:
         raise ValueError("Maximum upload size must be positive")
-    
+
     if upload_config.chunk_size_mb <= 0:
         raise ValueError("Chunk size must be positive")
-    
+
     if upload_config.chunk_size_mb > upload_config.max_upload_size_mb:
         raise ValueError("Chunk size cannot be larger than maximum upload size")
-    
+
     logger.debug("Upload configuration valid",
-                max_size_mb=upload_config.max_upload_size_mb,
-                chunk_size_mb=upload_config.chunk_size_mb)
+                 max_size_mb=upload_config.max_upload_size_mb,
+                 chunk_size_mb=upload_config.chunk_size_mb)
+
 
 def _validate_task_config(task_config):
     """Validate task configuration"""
-    
+
     if task_config.task_timeout_seconds <= 0:
         raise ValueError("Task timeout must be positive")
-    
+
     if task_config.max_concurrent_tasks <= 0:
         raise ValueError("Maximum concurrent tasks must be positive")
-    
+
     logger.debug("Task configuration valid",
-                timeout_seconds=task_config.task_timeout_seconds,
-                max_concurrent=task_config.max_concurrent_tasks)
+                 timeout_seconds=task_config.task_timeout_seconds,
+                 max_concurrent=task_config.max_concurrent_tasks)
 ```
 
 ## 4. Application Initialization
