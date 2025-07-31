@@ -48,6 +48,7 @@ class ProcessingSession:
     user_id: str
     transcript: str
     current_stage: ProcessingStage
+    current_task: str
     start_time: datetime
     last_checkpoint: datetime
     progress_percentage: float
@@ -148,6 +149,7 @@ class AgentOrchestrator:
             "metadata": metadata or {},
             "progress_percentage": 0.0,
             "current_stage": ProcessingStage.INITIALIZATION.value,
+            "current_task": "Session created, awaiting processing...",
             "errors": []
         }
         
@@ -200,6 +202,7 @@ class AgentOrchestrator:
             user_id=user_id,
             transcript=transcript,
             current_stage=ProcessingStage.INITIALIZATION,
+            current_task="Initializing processing session...",
             start_time=datetime.now(),
             last_checkpoint=datetime.now(),
             progress_percentage=0.0,
@@ -253,6 +256,7 @@ class AgentOrchestrator:
             user_id=user_id,
             transcript=transcript,
             current_stage=ProcessingStage.INITIALIZATION,
+            current_task="Initializing transcript processing...",
             start_time=datetime.now(),
             last_checkpoint=datetime.now(),
             progress_percentage=0.0,
@@ -580,6 +584,7 @@ class AgentOrchestrator:
                              task_description: str):
         """Update session progress and notify callbacks"""
         session.current_stage = stage
+        session.current_task = task_description
         session.progress_percentage = progress
         session.last_checkpoint = datetime.now()
         
@@ -663,6 +668,7 @@ class AgentOrchestrator:
                 "session_id": session.session_id,
                 "user_id": session.user_id,
                 "current_stage": session.current_stage.value,
+                "current_task": session.current_task,
                 "progress_percentage": session.progress_percentage,
                 "start_time": session.start_time.isoformat(),
                 "last_checkpoint": session.last_checkpoint.isoformat(),
@@ -679,6 +685,7 @@ class AgentOrchestrator:
                 "session_id": pending_session["session_id"],
                 "user_id": "pending",  # User ID not set until processing starts
                 "current_stage": pending_session["current_stage"],
+                "current_task": pending_session.get("current_task", "Preparing session..."),
                 "progress_percentage": pending_session["progress_percentage"],
                 "start_time": pending_session["created_at"].isoformat(),
                 "last_checkpoint": pending_session["created_at"].isoformat(),
