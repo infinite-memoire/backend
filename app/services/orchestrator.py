@@ -733,6 +733,53 @@ class AgentOrchestrator:
         logger.info("Session cancelled", session_id=session_id)
         return True
     
+    async def mark_session_failed(self, session_id: str, error_message: str) -> bool:
+        """Mark a session as failed with a specific error message"""
+        # Check both active sessions and pending sessions
+        session = self.active_sessions.get(session_id)
+        
+        if session:
+            # Handle active session failure
+            session.current_stage = ProcessingStage.FAILED
+            session.errors.append({
+                "timestamp": datetime.now().isoformat(),
+                "error": error_message,
+                "traceback": None  # External failure, no traceback available
+            })
+            
+            # Move session to completed sessions for status tracking
+            self.completed_sessions[session_id] = session
+            del self.active_sessions[session_id]
+            
+            await self._update_progress(session, ProcessingStage.FAILED, session.progress_percentage,
+                                      f"Processing failed: {error_message}")
+            
+            logger.error("Session marked as failed",
+                        session_id=session_id,
+                        error=error_message)
+            return True
+        
+        # Check pending sessions
+        elif session_id in self.pending_sessions:
+            pending_session = self.pending_sessions[session_id]
+            pending_session["current_stage"] = ProcessingStage.FAILED.value
+            pending_session["current_task"] = f"Failed: {error_message}"
+            pending_session["errors"].append({
+                "timestamp": datetime.now().isoformat(),
+                "error": error_message
+            })
+            
+            logger.error("Pending session marked as failed",
+                        session_id=session_id,
+                        error=error_message)
+            return True
+        
+        else:
+            logger.warning("Attempted to mark non-existent session as failed",
+                          session_id=session_id,
+                          error=error_message)
+            return False
+    
     async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for orchestrator and all components"""
         health_status = {
