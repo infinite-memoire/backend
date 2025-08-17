@@ -10,7 +10,6 @@ class ModelType(Enum):
     WHISPER_LARGE = "whisper-large-v2"
     WHISPER_MEDIUM = "whisper-medium"
     WHISPER_BASE = "whisper-base"
-    WAV2VEC2_FALLBACK = "wav2vec2-fallback"
 
 class QualityTier(Enum):
     FAST = "fast"          # Faster, lower accuracy
@@ -25,7 +24,6 @@ class STTManager:
     def __init__(self):
         self.settings = get_settings()
         self.primary_service = None
-        self.fallback_service = None
         self.model_info = {}
         self._initialization_lock = asyncio.Lock()
         
@@ -51,27 +49,19 @@ class STTManager:
             try:
                 # Import here to avoid circular imports
                 from .whisper_service import stt_service
-                from .wav2vec2_fallback import fallback_stt_service
                 
                 # Initialize primary service (Whisper)
                 logger.info("Initializing primary STT service (Whisper)")
                 self.primary_service = stt_service
                 await self.primary_service.initialize_model()
                 
-                # Initialize fallback service (Wav2Vec2)
-                logger.info("Initializing fallback STT service (Wav2Vec2)")
-                self.fallback_service = fallback_stt_service
-                await self.fallback_service.initialize_model()
-                
                 # Store model information
                 self.model_info = {
-                    "primary": self.primary_service.get_model_info(),
-                    "fallback": self.fallback_service.get_model_info()
+                    "primary": self.primary_service.get_model_info()
                 }
                 
                 logger.info("STT Manager initialization completed",
-                           primary_model=self.model_info["primary"]["model_name"],
-                           fallback_model=self.model_info["fallback"]["model_name"])
+                           primary_model=self.model_info["primary"]["model_name"])
                 
                 return True
                 
@@ -89,8 +79,7 @@ class STTManager:
         language: Optional[str] = None,
         user_id: Optional[str] = None,
         priority: str = "normal",
-        progress_callback: Optional[Callable[[float], None]] = None,
-        attempt_fallback: bool = True
+        progress_callback: Optional[Callable[[float], None]] = None
     ) -> Dict[str, Any]:
         """
         Transcribe audio with intelligent model selection and fallback handling
@@ -102,7 +91,6 @@ class STTManager:
             user_id: User identifier for logging
             priority: Processing priority (normal, high, premium)
             progress_callback: Progress callback function
-            attempt_fallback: Whether to try fallback on primary failure
             
         Returns:
             Transcription result with metadata
@@ -125,14 +113,11 @@ class STTManager:
             if progress_callback:
                 progress_callback(5.0)  # Starting
             
-            # Choose service based on quality tier
-            if selected_model in [ModelType.WHISPER_LARGE, ModelType.WHISPER_MEDIUM, ModelType.WHISPER_BASE]:
-                service = self.primary_service
-                # Adjust model size if needed (this would require model reloading in production)
-                if selected_model == ModelType.WHISPER_BASE and quality_tier == QualityTier.FAST:
-                    logger.info("Using fast processing mode")
-            else:
-                service = self.fallback_service
+            # Use primary service (Whisper)
+            service = self.primary_service
+            # Adjust model size if needed (this would require model reloading in production)
+            if selected_model == ModelType.WHISPER_BASE and quality_tier == QualityTier.FAST:
+                logger.info("Using fast processing mode")
             
             result = await service.transcribe_audio(
                 audio_data=audio_data,
@@ -146,7 +131,6 @@ class STTManager:
                 "quality_tier": quality_tier.value,
                 "model_selected": selected_model.value,
                 "service_used": "primary",
-                "fallback_attempted": False,
                 "user_id": user_id,
                 "priority": priority
             }
@@ -161,54 +145,11 @@ class STTManager:
             return result
             
         except Exception as primary_error:
-            logger.warning("Primary STT service failed",
+            logger.error("STT service failed",
                          model=selected_model.value,
                          user_id=user_id,
                          error_message=str(primary_error))
-            
-            if not attempt_fallback:
-                raise primary_error
-            
-            # Try fallback service
-            try:
-                logger.info("Attempting fallback transcription",
-                           user_id=user_id,
-                           fallback_model=self.model_info["fallback"]["model_name"])
-                
-                if progress_callback:
-                    progress_callback(10.0)  # Restarting with fallback
-                
-                result = await self.fallback_service.transcribe_audio(
-                    audio_data=audio_data,
-                    language=language,
-                    progress_callback=progress_callback,
-                    word_timestamps=False  # Fallback has limited timestamp support
-                )
-                
-                # Add fallback metadata
-                result["stt_manager"] = {
-                    "quality_tier": quality_tier.value,
-                    "model_selected": selected_model.value,
-                    "service_used": "fallback",
-                    "fallback_attempted": True,
-                    "primary_error": str(primary_error),
-                    "user_id": user_id,
-                    "priority": priority
-                }
-                
-                logger.info("Fallback transcription successful",
-                           fallback_model=result.get("model_used"),
-                           text_length=len(result.get("text", "")),
-                           user_id=user_id)
-                
-                return result
-                
-            except Exception as fallback_error:
-                logger.error("Both primary and fallback STT services failed",
-                           primary_error=str(primary_error),
-                           fallback_error=str(fallback_error),
-                           user_id=user_id)
-                raise Exception(f"STT processing failed. Primary: {primary_error}, Fallback: {fallback_error}")
+            raise primary_error
     
     async def batch_transcribe(
         self,
@@ -297,8 +238,7 @@ class STTManager:
         
         return {
             "models": {
-                "primary": self.model_info.get("primary", {}),
-                "fallback": self.model_info.get("fallback", {})
+                "primary": self.model_info.get("primary", {})
             },
             "quality_tiers": {
                 tier.value: {
@@ -325,21 +265,13 @@ class STTManager:
         # Check primary service
         primary_health = await self.primary_service.health_check()
         
-        # Check fallback service
-        fallback_health = await self.fallback_service.health_check()
-        
         # Overall status
-        overall_status = "healthy"
-        if primary_health["status"] != "healthy" and fallback_health["status"] != "healthy":
-            overall_status = "unhealthy"
-        elif primary_health["status"] != "healthy":
-            overall_status = "degraded"  # Fallback available
+        overall_status = primary_health["status"]
         
         return {
             "status": overall_status,
             "services": {
-                "primary": primary_health,
-                "fallback": fallback_health
+                "primary": primary_health
             },
             "quality_tiers": list(self.quality_tiers.keys()),
             "manager_info": {

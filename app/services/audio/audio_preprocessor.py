@@ -1,5 +1,4 @@
 import io
-import numpy as np
 from typing import List, Dict, Any, Optional, Tuple, Union
 from pathlib import Path
 import tempfile
@@ -7,8 +6,6 @@ import os
 import asyncio
 from pydub import AudioSegment
 from pydub.utils import which
-import librosa
-import torchaudio
 from app.utils.logging_utils import get_logger, log_performance
 from app.config.settings_config import get_settings
 
