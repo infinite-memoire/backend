@@ -9,6 +9,8 @@
 # from app.config.settings_config import get_settings
 #
 # logger = get_logger("wav2vec2_service")
+from typing import Optional
+
 
 class Wav2Vec2STTService:
     """
