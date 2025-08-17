@@ -24,36 +24,41 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
+    
+    - name: Install UV
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
     
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-uv-
     
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt -r requirements-dev.txt
+        uv sync --dev
     
     - name: Lint with flake8
       run: |
-        flake8 app/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 app/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        uv run flake8 app/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        uv run flake8 app/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Type check with mypy
       run: |
-        mypy app/ --ignore-missing-imports
+        uv run mypy app/ --ignore-missing-imports
     
     - name: Security check with bandit
       run: |
-        bandit -r app/ -f json -o bandit-report.json
+        uv run bandit -r app/ -f json -o bandit-report.json
     
     - name: Run tests
       run: |
-        pytest --cov=app --cov-report=xml --cov-report=html
+        uv run pytest --cov=app --cov-report=xml --cov-report=html
       env:
         NEO4J_URI: bolt://localhost:7687
         NEO4J_PASSWORD: test_password

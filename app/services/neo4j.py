@@ -9,12 +9,17 @@ logger = get_logger(__name__)
 class Neo4jService:
     def __init__(self):
         settings = get_settings()
-        self.driver = GraphDatabase.driver(
-            settings.database.neo4j_uri,
-            auth=(settings.database.neo4j_user, settings.database.neo4j_password)
-        )
-        self.driver.verify_connectivity()
-        logger.info("Neo4j driver initialized", uri=settings.database.neo4j_uri)
+        self.driver = None
+        try:
+            self.driver = GraphDatabase.driver(
+                settings.database.neo4j_uri,
+                auth=(settings.database.neo4j_user, settings.database.neo4j_password)
+            )
+            self.driver.verify_connectivity()
+            logger.info("Neo4j driver initialized", uri=settings.database.neo4j_uri)
+        except Exception as e:
+            logger.warning("Neo4j connection failed, running in offline mode", error=str(e))
+            self.driver = None
         
     def close(self):
         """Close the Neo4j driver connection"""
@@ -24,6 +29,9 @@ class Neo4jService:
         
     async def test_connection(self):
         """Test Neo4j connection"""
+        if not self.driver:
+            logger.warning("Neo4j driver not available, skipping connection test")
+            return
         try:
             with self.driver.session() as session:
                 result = session.run("RETURN 1 as test")
@@ -38,6 +46,9 @@ class Neo4jService:
             
     async def create_story_node(self, node_data: dict) -> str:
         """Create a story node in the graph"""
+        if not self.driver:
+            logger.warning("Neo4j driver not available, skipping story node creation")
+            return "offline_node_" + node_data.get("id", "unknown")
         try:
             with self.driver.session() as session:
                 result = session.execute_write(self._create_node, node_data)
@@ -65,6 +76,9 @@ class Neo4jService:
     async def create_relationship(self, from_node_id: str, to_node_id: str, 
                                 relationship_type: str, properties: dict = None) -> bool:
         """Create a relationship between two nodes"""
+        if not self.driver:
+            logger.warning("Neo4j driver not available, skipping relationship creation")
+            return False
         try:
             with self.driver.session() as session:
                 result = session.execute_write(

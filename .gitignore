@@ -4,4 +4,9 @@ infinite-memoire-dev-firebase-adminsdk-fbsvc-f8342530d7.json
 .idea
 .vscode
 
+*.pyc.DS_Store
+.venv/
+backend.egg-info/
+.firebaserc
+__pycache__/
 *.pyc

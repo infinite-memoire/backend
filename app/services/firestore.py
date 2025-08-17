@@ -4,6 +4,7 @@ from app.utils.logging_utils import get_logger
 import firebase_admin
 from firebase_admin import credentials
 from typing import Optional, List, Tuple, Any
+import os
 
 logger = get_logger(__name__)
 
@@ -17,22 +18,24 @@ class FirestoreService:
         # Initialize Firestore client
         if settings.database.firestore_emulator_host:
             # Use emulator for development
-            import os
             os.environ["FIRESTORE_EMULATOR_HOST"] = settings.database.firestore_emulator_host
             self.db = firestore.Client(project=settings.database.firestore_project_id)
             logger.info("Connected to Firestore emulator", 
                        host=settings.database.firestore_emulator_host)
         else:
             # Use production Firestore
-            if settings.database.firestore_credentials_path:
+            if settings.database.firestore_credentials_path and os.path.exists(settings.database.firestore_credentials_path):
                 self.db = firestore.Client.from_service_account_json(
                     settings.database.firestore_credentials_path,
                     project=settings.database.firestore_project_id
                 )
+                logger.info("Connected to production Firestore with service account",
+                           project=settings.database.firestore_project_id)
             else:
+                # Use default credentials (ADC)
                 self.db = firestore.Client(project=settings.database.firestore_project_id)
-            logger.info("Connected to production Firestore",
-                       project=settings.database.firestore_project_id)
+                logger.info("Connected to production Firestore with default credentials",
+                           project=settings.database.firestore_project_id)
         
     async def test_connection(self):
         """Test Firestore connection"""
