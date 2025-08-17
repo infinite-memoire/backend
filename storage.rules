@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload/read audio files in their user directory
+    match /users/{userId}/audio/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload/read recordings in their chapters
+    match /users/{userId}/chapters/{chapterId}/recordings/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Global audio storage (if used) - restrict to authenticated users
+    match /audio/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Recordings storage (if used globally) - restrict to authenticated users  
+    match /recordings/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
