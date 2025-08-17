@@ -270,17 +270,28 @@ class FirebaseAudioProcessor:
         transcript_records = []
         
         try:
-            for i, audio_file in enumerate(audio_files):
-                logger.info(f"Transcribing audio file {i+1}/{len(audio_files)}: {audio_file}")
-                
-                # Use existing STT service interface
-                transcription_result = await self.stt_service.transcribe_audio_file(str(audio_file))
-                
-                if transcription_result and "text" in transcription_result:
+            # Use batch transcription for efficiency
+            file_paths = [str(audio_file) for audio_file in audio_files]
+            logger.info(f"Starting batch transcription of {len(file_paths)} audio files")
+            
+            # Progress callback for batch transcription
+            def progress_callback(completed: int, total: int):
+                logger.info(f"Transcription progress: {completed}/{total} files completed")
+            
+            # Batch transcribe all files
+            transcription_results = await self.stt_service.batch_transcribe_files(
+                audio_file_paths=file_paths,
+                language=None,  # Auto-detect
+                progress_callback=progress_callback
+            )
+            
+            # Process results
+            for i, (audio_file, transcription_result) in enumerate(zip(audio_files, transcription_results)):
+                if transcription_result and "text" in transcription_result and not transcription_result.get("error"):
                     transcript_text = transcription_result["text"].strip()
                     if transcript_text:
                         combined_transcript += f"[Recording {i+1}]\n{transcript_text}\n\n"
-                        logger.info(f"Transcribed {len(transcript_text)} characters")
+                        logger.info(f"Transcribed {len(transcript_text)} characters from {audio_file}")
                         
                         # Record transcription in Firestore
                         transcript_record = {
@@ -288,16 +299,19 @@ class FirebaseAudioProcessor:
                             'transcript_text': transcript_text,
                             'transcription_timestamp': datetime.utcnow().isoformat(),
                             'character_count': len(transcript_text),
-                            'confidence_score': transcription_result.get('confidence', None),
+                            'confidence_score': transcription_result.get('confidence_score', None),
                             'language': transcription_result.get('language', 'unknown'),
-                            'processing_time_seconds': transcription_result.get('processing_time', None)
+                            'processing_time_seconds': transcription_result.get('processing_time_seconds', None),
+                            'model_used': transcription_result.get('model_used', 'unknown'),
+                            'file_size_bytes': transcription_result.get('file_size_bytes', 0)
                         }
                         
                         transcript_id = await self.firestore_service.create_transcript_record(transcript_record)
                         transcript_records.append(transcript_id)
                         logger.info(f"Saved transcript record: {transcript_id}")
                 else:
-                    logger.warning(f"No transcription result for file {audio_file}")
+                    error_msg = transcription_result.get("error", "No transcription result")
+                    logger.warning(f"No transcription result for file {audio_file}: {error_msg}")
         
         except Exception as e:
             logger.error(f"Transcription failed: {str(e)}")

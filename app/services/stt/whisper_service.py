@@ -3,7 +3,6 @@ import whisper
 from typing import Dict, List, Optional, Callable, Any
 import asyncio
 import numpy as np
-from pathlib import Path
 import hashlib
 import time
 from app.utils.logging_utils import get_logger, log_performance
@@ -67,6 +66,65 @@ class WhisperSTTService:
                            error_type=type(e).__name__,
                            error_message=str(e))
                 raise
+    
+    @log_performance(logger)
+    async def transcribe_audio_file(
+        self,
+        audio_file_path: str,
+        language: Optional[str] = None,
+        task: str = "transcribe",
+        progress_callback: Optional[Callable[[float], None]] = None,
+        word_timestamps: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Transcribe audio file using Whisper model
+        
+        Args:
+            audio_file_path: Path to the audio file
+            language: Language code (auto-detect if None)
+            task: "transcribe" or "translate"
+            progress_callback: Callback for progress updates
+            word_timestamps: Include word-level timestamps
+            
+        Returns:
+            Dictionary with transcription results
+        """
+        try:
+            # Read audio file as bytes
+            with open(audio_file_path, 'rb') as audio_file:
+                audio_data = audio_file.read()
+            
+            logger.info("Transcribing audio file",
+                       file_path=audio_file_path,
+                       file_size_bytes=len(audio_data),
+                       language=language,
+                       task=task)
+            
+            # Use existing transcribe_audio method
+            result = await self.transcribe_audio(
+                audio_data=audio_data,
+                language=language,
+                task=task,
+                progress_callback=progress_callback,
+                word_timestamps=word_timestamps
+            )
+            
+            # Add file-specific information to result
+            result["source_file"] = audio_file_path
+            result["file_size_bytes"] = len(audio_data)
+            
+            return result
+            
+        except FileNotFoundError:
+            error_msg = f"Audio file not found: {audio_file_path}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+        except Exception as e:
+            logger.error("Audio file transcription failed",
+                        file_path=audio_file_path,
+                        error_type=type(e).__name__,
+                        error_message=str(e))
+            raise
     
     @log_performance(logger)
     async def transcribe_audio(
@@ -157,6 +215,7 @@ class WhisperSTTService:
                 try:
                     # Load and preprocess audio
                     audio = whisper.load_audio(tmp_file.name)
+                    logger.info(f"Loaded audio from bytes: {audio.shape}",)
                     # Ensure audio is padded or trimmed to 30 seconds max per chunk
                     audio = whisper.pad_or_trim(audio)
                     return audio
@@ -257,6 +316,69 @@ class WhisperSTTService:
                 })
         
         logger.info("Batch transcription completed",
+                   total_files=total_files,
+                   successful_files=len([r for r in results if "error" not in r]),
+                   failed_files=len([r for r in results if "error" in r]))
+        
+        return results
+    
+    async def batch_transcribe_files(
+        self,
+        audio_file_paths: List[str],
+        language: Optional[str] = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Batch transcribe multiple audio files for efficiency
+        
+        Args:
+            audio_file_paths: List of audio file paths
+            language: Language code for all files
+            progress_callback: Callback with (completed, total) progress
+            
+        Returns:
+            List of transcription results
+        """
+        if self.model is None:
+            await self.initialize_model()
+        
+        results = []
+        total_files = len(audio_file_paths)
+        
+        logger.info("Starting batch file transcription",
+                   batch_size=total_files,
+                   model_size=self.model_size)
+        
+        for i, file_path in enumerate(audio_file_paths):
+            try:
+                result = await self.transcribe_audio_file(
+                    audio_file_path=file_path,
+                    language=language,
+                    word_timestamps=True
+                )
+                results.append(result)
+                
+                if progress_callback:
+                    progress_callback(i + 1, total_files)
+                    
+            except Exception as e:
+                logger.error("Batch file transcription item failed",
+                           file_path=file_path,
+                           batch_index=i,
+                           total_batch_size=total_files,
+                           error_message=str(e))
+                # Add error result to maintain batch consistency
+                results.append({
+                    "text": "",
+                    "error": str(e),
+                    "confidence_score": 0.0,
+                    "word_timestamps": [],
+                    "model_used": f"whisper-{self.model_size}",
+                    "processing_time_seconds": 0.0,
+                    "source_file": file_path
+                })
+        
+        logger.info("Batch file transcription completed",
                    total_files=total_files,
                    successful_files=len([r for r in results if "error" not in r]),
                    failed_files=len([r for r in results if "error" in r]))
