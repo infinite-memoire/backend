@@ -343,14 +343,30 @@ class FirebaseAudioProcessor:
         return combined_transcript.strip()
     
     def cleanup_temp_files(self, temp_files: List[Path]):
-        """Clean up temporary audio files"""
+        """Clean up temporary audio files with Windows-safe retry logic"""
+        import time
+        
         for temp_file in temp_files:
-            try:
-                if temp_file.exists():
+            if not temp_file.exists():
+                continue
+                
+            # Windows-safe cleanup with retry logic
+            max_attempts = 5
+            for attempt in range(max_attempts):
+                try:
                     temp_file.unlink()
                     logger.info(f"Cleaned up temporary file: {temp_file}")
-            except Exception as e:
-                logger.warning(f"Failed to cleanup {temp_file}: {str(e)}")
+                    break
+                except PermissionError as e:
+                    if attempt < max_attempts - 1:
+                        logger.warning(f"Failed to delete temp file {temp_file} (attempt {attempt + 1}/{max_attempts}): {e}")
+                        time.sleep(0.2)  # Wait 200ms before retry
+                    else:
+                        logger.error(f"Failed to delete temp file {temp_file} after {max_attempts} attempts: {e}")
+                        # Don't raise the error, just log it
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup {temp_file}: {str(e)}")
+                    break
 
 # Background processing task
 async def process_audio_background(

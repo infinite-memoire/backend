@@ -77,7 +77,7 @@ class WhisperSTTService:
         word_timestamps: bool = True
     ) -> Dict[str, Any]:
         """
-        Transcribe audio file using Whisper model
+        Transcribe audio file using Whisper model (direct file processing)
         
         Args:
             audio_file_path: Path to the audio file
@@ -89,31 +89,69 @@ class WhisperSTTService:
         Returns:
             Dictionary with transcription results
         """
+        if self.model is None:
+            await self.initialize_model()
+        
         try:
-            # Read audio file as bytes
-            with open(audio_file_path, 'rb') as audio_file:
-                audio_data = audio_file.read()
+            # Get file size for metadata
+            import os
+            file_size = os.path.getsize(audio_file_path)
             
-            logger.info("Transcribing audio file",
+            logger.info("Transcribing audio file directly",
                        file_path=audio_file_path,
-                       file_size_bytes=len(audio_data),
+                       file_size_bytes=file_size,
                        language=language,
                        task=task)
             
-            # Use existing transcribe_audio method
-            result = await self.transcribe_audio(
-                audio_data=audio_data,
-                language=language,
-                task=task,
-                progress_callback=progress_callback,
-                word_timestamps=word_timestamps
+            if progress_callback:
+                progress_callback(10.0)  # File loaded
+            
+            # Load audio directly from file (avoids temp file creation)
+            audio_array = await self._load_audio_file_direct(audio_file_path)
+            
+            if progress_callback:
+                progress_callback(20.0)  # Audio loaded
+            
+            # Prepare transcription options
+            options = {
+                "task": task,
+                "language": language,
+                "word_timestamps": word_timestamps,
+                "verbose": False
+            }
+            
+            if progress_callback:
+                progress_callback(30.0)  # Starting transcription
+            
+            # Run transcription in thread pool
+            start_time = time.time()
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, self._transcribe_with_options, audio_array, options
             )
+            processing_time = time.time() - start_time
+            
+            if progress_callback:
+                progress_callback(90.0)  # Transcription complete
+            
+            # Process and format results
+            formatted_result = self._format_transcription_result(result, processing_time)
             
             # Add file-specific information to result
-            result["source_file"] = audio_file_path
-            result["file_size_bytes"] = len(audio_data)
+            formatted_result["source_file"] = audio_file_path
+            formatted_result["file_size_bytes"] = file_size
             
-            return result
+            if progress_callback:
+                progress_callback(100.0)  # Complete
+            
+            logger.info("Audio file transcription completed",
+                       file_path=audio_file_path,
+                       text_length=len(formatted_result["text"]),
+                       word_count=len(formatted_result["text"].split()),
+                       processing_time_seconds=processing_time,
+                       confidence_score=formatted_result["confidence_score"],
+                       model_used=f"whisper-{self.model_size}")
+            
+            return formatted_result
             
         except FileNotFoundError:
             error_msg = f"Audio file not found: {audio_file_path}"
@@ -125,6 +163,17 @@ class WhisperSTTService:
                         error_type=type(e).__name__,
                         error_message=str(e))
             raise
+    
+    async def _load_audio_file_direct(self, audio_file_path: str) -> np.ndarray:
+        """Load audio file directly without creating temporary files"""
+        def _load():
+            # Load and preprocess audio directly from file
+            audio = whisper.load_audio(audio_file_path)
+            # Ensure audio is padded or trimmed to 30 seconds max per chunk
+            audio = whisper.pad_or_trim(audio)
+            return audio
+        
+        return await asyncio.get_event_loop().run_in_executor(None, _load)
     
     @log_performance(logger)
     async def transcribe_audio(
@@ -207,20 +256,38 @@ class WhisperSTTService:
             # Use whisper's built-in audio loading
             import tempfile
             import os
+            import time
             
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
-                tmp_file.write(audio_data)
-                tmp_file.flush()
+            tmp_file_path = None
+            try:
+                # Create temporary file manually to have better control
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+                    tmp_file.write(audio_data)
+                    tmp_file.flush()
+                    tmp_file_path = tmp_file.name
                 
-                try:
-                    # Load and preprocess audio
-                    audio = whisper.load_audio(tmp_file.name)
-                    logger.info(f"Loaded audio from bytes: {audio.shape}",)
-                    # Ensure audio is padded or trimmed to 30 seconds max per chunk
-                    audio = whisper.pad_or_trim(audio)
-                    return audio
-                finally:
-                    os.unlink(tmp_file.name)
+                # Load and preprocess audio
+                audio = whisper.load_audio(tmp_file_path)
+                logger.info(f"Loaded audio from bytes: {audio.shape}")
+                # Ensure audio is padded or trimmed to 30 seconds max per chunk
+                audio = whisper.pad_or_trim(audio)
+                return audio
+                
+            finally:
+                # Windows-safe file cleanup with retry logic
+                if tmp_file_path and os.path.exists(tmp_file_path):
+                    max_attempts = 5
+                    for attempt in range(max_attempts):
+                        try:
+                            os.unlink(tmp_file_path)
+                            break
+                        except PermissionError as e:
+                            if attempt < max_attempts - 1:
+                                logger.warning(f"Failed to delete temp file (attempt {attempt + 1}/{max_attempts}): {e}")
+                                time.sleep(0.1)  # Wait 100ms before retry
+                            else:
+                                logger.error(f"Failed to delete temp file after {max_attempts} attempts: {e}")
+                                # Don't raise the error, just log it - the temp file will be cleaned up by OS eventually
         
         return await asyncio.get_event_loop().run_in_executor(None, _convert)
     
