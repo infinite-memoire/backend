@@ -57,30 +57,105 @@ class FirebaseAudioProcessor:
         
         # Initialize Firebase Admin SDK if not already initialized
         self._init_firebase_admin()
+        
+        # Check if we're running against emulators
+        self.is_emulator = self._is_emulator_mode()
     
     def _init_firebase_admin(self):
         """Initialize Firebase Admin SDK with proper credentials"""
         try:
             # Check if Firebase Admin is already initialized
-            firebase_admin.get_app()
-            logger.info("Firebase Admin SDK already initialized")
+            app = firebase_admin.get_app()
+            logger.info(f"Firebase Admin SDK already initialized for project: {app.project_id}")
+            
+            # Verify storage bucket configuration
+            try:
+                test_bucket = storage.bucket()
+                logger.info(f"Storage bucket available: {test_bucket.name}")
+            except Exception as bucket_error:
+                logger.error(f"Storage bucket not accessible: {str(bucket_error)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Firebase Storage bucket not accessible: {str(bucket_error)}"
+                )
+                
         except ValueError:
             # Initialize Firebase Admin SDK
             if self.settings.database.firestore_credentials_path:
+                logger.info(f"Initializing Firebase Admin with credentials: {self.settings.database.firestore_credentials_path}")
                 cred = credentials.Certificate(self.settings.database.firestore_credentials_path)
-                firebase_admin.initialize_app(cred, {
-                    'storageBucket': f'{self.settings.database.firestore_project_id}.appspot.com'
+                
+                # Try to determine correct storage bucket name
+                project_id = self.settings.database.firestore_project_id
+                
+                # Try new format first (.firebasestorage.app)
+                storage_bucket = f'{project_id}.firebasestorage.app'
+                logger.info(f"Trying storage bucket: {storage_bucket}")
+                
+                app = firebase_admin.initialize_app(cred, {
+                    'storageBucket': storage_bucket
                 })
-                logger.info("Firebase Admin SDK initialized with service account")
+                logger.info(f"Firebase Admin SDK initialized with service account for project: {app.project_id}")
+                
+                # Test storage access immediately after initialization
+                try:
+                    test_bucket = storage.bucket()
+                    logger.info(f"Storage bucket verified: {test_bucket.name}")
+                    
+                    # Test listing a few blobs to verify permissions
+                    blobs = list(test_bucket.list_blobs(max_results=1))
+                    logger.info(f"Storage access test successful, can list blobs")
+                except Exception as storage_test_error:
+                    logger.error(f"Storage access test failed with .firebasestorage.app: {str(storage_test_error)}")
+                    
+                    # Try legacy format (.appspot.com) as fallback
+                    logger.info("Trying legacy bucket format...")
+                    try:
+                        # Reinitialize with legacy bucket name
+                        firebase_admin.delete_app(app)
+                        
+                        legacy_storage_bucket = f'{project_id}.appspot.com'
+                        logger.info(f"Trying legacy storage bucket: {legacy_storage_bucket}")
+                        
+                        app = firebase_admin.initialize_app(cred, {
+                            'storageBucket': legacy_storage_bucket
+                        })
+                        
+                        test_bucket = storage.bucket()
+                        logger.info(f"Legacy storage bucket verified: {test_bucket.name}")
+                        
+                        # Test listing a few blobs to verify permissions
+                        blobs = list(test_bucket.list_blobs(max_results=1))
+                        logger.info(f"Legacy storage access test successful, can list blobs")
+                        
+                    except Exception as legacy_error:
+                        logger.error(f"Both storage bucket formats failed. New: {str(storage_test_error)}, Legacy: {str(legacy_error)}")
+                        logger.error(f"Please verify that Firebase Storage is enabled for project '{project_id}' and that the bucket exists")
+                        logger.error(f"Expected bucket names: {project_id}.firebasestorage.app OR {project_id}.appspot.com")
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Firebase Storage bucket not found. Tried: {project_id}.firebasestorage.app and {project_id}.appspot.com. Please verify Firebase Storage is enabled and bucket exists."
+                        )
             else:
                 logger.warning("No Firebase credentials found, using default credentials")
-                firebase_admin.initialize_app()
+                app = firebase_admin.initialize_app()
+                logger.info(f"Firebase Admin SDK initialized with default credentials for project: {app.project_id}")
+                
         except Exception as e:
             logger.error(f"Failed to initialize Firebase Admin SDK: {str(e)}")
             raise HTTPException(
                 status_code=500,
-                detail="Firebase authentication not configured properly"
+                detail=f"Firebase authentication not configured properly: {str(e)}"
             )
+    
+    def _is_emulator_mode(self) -> bool:
+        """Check if Firebase is running in emulator mode"""
+        import os
+        return (
+            os.getenv('FIRESTORE_EMULATOR_HOST') is not None or
+            os.getenv('FIREBASE_STORAGE_EMULATOR_HOST') is not None or
+            hasattr(self.settings.database, 'firestore_emulator_host') and self.settings.database.firestore_emulator_host
+        )
     
     def _extract_storage_path(self, firebase_url: str) -> str:
         """Extract the storage path from a Firebase Storage URL"""
@@ -113,16 +188,51 @@ class FirebaseAudioProcessor:
                 # Extract storage path from Firebase URL
                 storage_path = self._extract_storage_path(url)
                 logger.info(f"Storage path: {storage_path}")
+                logger.info(f"Full Firebase URL: {url}")
+                logger.info(f"Bucket name: {bucket.name}")
                 
                 # Get blob reference with proper authentication
                 blob = bucket.blob(storage_path)
                 
-                # Check if blob exists
-                if not blob.exists():
-                    raise FileNotFoundError(f"Audio file not found in Firebase Storage: {storage_path}")
+                # Add detailed debugging for blob existence check
+                logger.info(f"Checking blob existence for: {blob.name}")
                 
-                # Download blob content with authentication
-                audio_content = blob.download_as_bytes()
+                # Try to get blob metadata first for better error reporting
+                try:
+                    blob.reload()
+                    logger.info(f"Blob metadata: size={blob.size}, updated={blob.updated}")
+                except Exception as metadata_error:
+                    logger.error(f"Failed to get blob metadata: {str(metadata_error)}")
+                    
+                    # Try listing similar blobs for debugging
+                    try:
+                        path_parts = storage_path.split('/')
+                        if len(path_parts) > 1:
+                            prefix = '/'.join(path_parts[:-1]) + '/'
+                            logger.info(f"Listing blobs with prefix: {prefix}")
+                            similar_blobs = list(bucket.list_blobs(prefix=prefix, max_results=10))
+                            for similar_blob in similar_blobs:
+                                logger.info(f"Found blob: {similar_blob.name}")
+                    except Exception as list_error:
+                        logger.error(f"Failed to list similar blobs: {str(list_error)}")
+                
+                # Check if blob exists and download with enhanced error handling
+                try:
+                    # Try direct download first (bypasses some permission issues)
+                    audio_content = blob.download_as_bytes()
+                    logger.info(f"Successfully downloaded {len(audio_content)} bytes")
+                except Exception as download_error:
+                    logger.error(f"Direct download failed: {str(download_error)}")
+                    
+                    # Check if blob exists for better error reporting
+                    if not blob.exists():
+                        raise FileNotFoundError(f"Audio file not found in Firebase Storage: {storage_path}")
+                    else:
+                        # Blob exists but download failed - permissions issue
+                        raise HTTPException(
+                            status_code=403,
+                            detail=f"Permission denied accessing Firebase Storage file: {storage_path}. Error: {str(download_error)}"
+                        )
                 
                 # Save to temporary file with unique name
                 temp_file = self.temp_dir / f"audio_{uuid.uuid4().hex}_{i}.wav"
