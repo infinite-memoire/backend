@@ -15,13 +15,14 @@ import traceback
 import numpy as np
 
 from app.utils.logging_utils import get_logger, log_performance
+from app.config.settings_config import get_settings
 from .semantic_chunker import SemanticChunker
 from .graph_builder import GraphBuilder, StorylineNode
 from .agents import (
     BaseAgent, 
-    ChapterWriterAgent, 
-    ChapterHarmonizerAgent,
-    FollowupQuestionsAgent,
+    get_chapter_writer_agent,
+    get_chapter_harmonizer_agent,
+    get_followup_questions_agent,
     TaskRequest,
     TaskResult,
     TaskStatus,
@@ -87,6 +88,9 @@ class AgentOrchestrator:
             neo4j_user: Neo4j username
             neo4j_password: Neo4j password
         """
+        # Get settings
+        self.settings = get_settings()
+        
         # Initialize core services
         self.semantic_chunker = SemanticChunker()
         self.graph_builder = GraphBuilder()
@@ -114,13 +118,28 @@ class AgentOrchestrator:
     
     def _register_agents(self, anthropic_api_key: Optional[str]):
         """Register all agents with the orchestrator"""
-        self.agents["chapter_writer"] = ChapterWriterAgent(
-            anthropic_api_key=anthropic_api_key
-        )
-        self.agents["chapter_harmonizer"] = ChapterHarmonizerAgent()
-        self.agents["followup_questions"] = FollowupQuestionsAgent()
+        # Use factory functions to get properly configured agents
+        self.agents["chapter_writer"] = get_chapter_writer_agent()
+        self.agents["chapter_harmonizer"] = get_chapter_harmonizer_agent()
+        self.agents["followup_questions"] = get_followup_questions_agent()
         
-        logger.info("Agents registered", agent_ids=list(self.agents.keys()))
+        # Verify AI provider configuration
+        chapter_writer = self.agents["chapter_writer"]
+        
+        if hasattr(chapter_writer, 'anthropic_client') and chapter_writer.anthropic_client:
+            logger.info("Agents registered with Anthropic AI enabled", 
+                       provider="anthropic", agent_ids=list(self.agents.keys()))
+        elif hasattr(chapter_writer, 'mistral_client') and chapter_writer.mistral_client:
+            logger.info("Agents registered with Mistral AI enabled", 
+                       provider="mistral", agent_ids=list(self.agents.keys()))
+        elif hasattr(chapter_writer, 'gemini_model') and chapter_writer.gemini_model:
+            logger.info("Agents registered with Google Gemini AI enabled", 
+                       provider="gemini", agent_ids=list(self.agents.keys()))
+        else:
+            ai_provider = getattr(chapter_writer, 'ai_provider', 'unknown')
+            logger.warning("Agents registered but AI is disabled (using templates)", 
+                         provider=ai_provider, agent_ids=list(self.agents.keys()))
+            logger.warning("To enable AI features, set AI_ANTHROPIC_API_KEY, AI_MISTRAL_API_KEY, or AI_GEMINI_API_KEY and AI_PROVIDER in environment variables")
     
     async def create_processing_session(self,
                                        session_id: str,

@@ -11,7 +11,10 @@ import re
 import numpy as np
 from abc import ABC, abstractmethod
 from anthropic import Anthropic
+from mistralai import Mistral
+import google.generativeai as genai
 from app.utils.logging_utils import get_logger, log_performance
+from app.config.settings_config import get_settings
 from .graph_builder import StorylineNode
 
 logger = get_logger("agents")
@@ -129,12 +132,45 @@ class ChapterWriterAgent(BaseAgent):
     def __init__(self, agent_id: str = "chapter_writer", anthropic_api_key: Optional[str] = None):
         super().__init__(agent_id, "Chapter Writer", ["content_generation", "narrative_writing"])
         
-        # Initialize LLM client
-        if anthropic_api_key:
-            self.anthropic_client = Anthropic(api_key=anthropic_api_key)
+        # Get settings
+        self.settings = get_settings()
+        
+        # Initialize LLM clients based on provider setting
+        self.ai_provider = self.settings.ai.provider.lower()
+        self.anthropic_client = None
+        self.mistral_client = None
+        self.gemini_model = None
+        
+        if self.ai_provider == "anthropic":
+            api_key = anthropic_api_key or self.settings.ai.anthropic_api_key
+            if api_key and api_key != "your-anthropic-api-key-here":
+                self.anthropic_client = Anthropic(api_key=api_key)
+                logger.info("Anthropic client initialized successfully")
+            else:
+                logger.warning("No valid Anthropic API key provided")
+                
+        elif self.ai_provider == "mistral":
+            api_key = self.settings.ai.mistral_api_key
+            if api_key and api_key != "your-mistral-api-key-here":
+                self.mistral_client = Mistral(api_key=api_key)
+                logger.info("Mistral client initialized successfully")
+            else:
+                logger.warning("No valid Mistral API key provided")
+                
+        elif self.ai_provider == "gemini":
+            api_key = self.settings.ai.gemini_api_key
+            if api_key and api_key != "your-gemini-api-key-here":
+                genai.configure(api_key=api_key)
+                self.gemini_model = genai.GenerativeModel(self.settings.ai.gemini_model)
+                logger.info("Google Gemini client initialized successfully")
+            else:
+                logger.warning("No valid Google Gemini API key provided")
+                
         else:
-            self.anthropic_client = None
-            logger.warning("No Anthropic API key provided, chapter generation will use templates")
+            logger.warning(f"Unknown AI provider: {self.ai_provider}")
+        
+        if not self.anthropic_client and not self.mistral_client and not self.gemini_model:
+            logger.warning("No AI client available, chapter generation will use templates")
         
         # Writing configuration
         self.target_word_count = 1200
@@ -204,7 +240,7 @@ class ChapterWriterAgent(BaseAgent):
         context_text = self._prepare_context_text(context_chunks)
         
         # Generate chapter content
-        if self.anthropic_client:
+        if self.anthropic_client or self.mistral_client or self.gemini_model:
             chapter_content = await self._generate_with_llm(storyline, context_text, user_preferences)
         else:
             chapter_content = self._generate_with_template(storyline, context_text)
@@ -227,7 +263,8 @@ class ChapterWriterAgent(BaseAgent):
             "themes": storyline.themes,
             "confidence": storyline.confidence,
             "generation_metadata": {
-                "method": "llm" if self.anthropic_client else "template",
+                "method": "llm" if (self.anthropic_client or self.mistral_client or self.gemini_model) else "template",
+                "ai_provider": self.ai_provider if (self.anthropic_client or self.mistral_client or self.gemini_model) else "none",
                 "target_word_count": self.target_word_count,
                 "actual_word_count": word_count,
                 "writing_style": self.writing_style,
@@ -262,30 +299,81 @@ class ChapterWriterAgent(BaseAgent):
                                 storyline: StorylineNode,
                                 context_text: str,
                                 user_preferences: Dict) -> str:
-        """Generate chapter content using Claude LLM"""
+        """Generate chapter content using configured LLM provider"""
         prompt = self._build_chapter_prompt(storyline, context_text, user_preferences)
         
         try:
-            # Call Claude API
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.anthropic_client.messages.create(
-                    model="claude-3-sonnet-20240229",
-                    max_tokens=2000,
-                    messages=[{"role": "user", "content": prompt}]
-                )
-            )
+            if self.anthropic_client:
+                content = await self._generate_with_anthropic(prompt)
+            elif self.mistral_client:
+                content = await self._generate_with_mistral(prompt)
+            elif self.gemini_model:
+                content = await self._generate_with_gemini(prompt)
+            else:
+                raise ValueError("No AI client available")
             
-            content = response.content[0].text
             logger.info("LLM chapter generation completed",
+                       provider=self.ai_provider,
                        input_tokens=len(prompt.split()),
                        output_tokens=len(content.split()))
             
             return content
             
         except Exception as e:
-            logger.error("LLM generation failed, falling back to template", error=str(e))
+            logger.error("LLM generation failed, falling back to template", 
+                        provider=self.ai_provider, error=str(e))
             return self._generate_with_template(storyline, context_text)
+    
+    async def _generate_with_anthropic(self, prompt: str) -> str:
+        """Generate content using Anthropic Claude"""
+        response = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: self.anthropic_client.messages.create(
+                model=self.settings.ai.anthropic_model,
+                max_tokens=self.settings.ai.anthropic_max_tokens,
+                messages=[{"role": "user", "content": prompt}]
+            )
+        )
+        return response.content[0].text
+    
+    async def _generate_with_mistral(self, prompt: str) -> str:
+        """Generate content using Mistral AI"""
+        response = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: self.mistral_client.chat.complete(
+                model=self.settings.ai.mistral_model,
+                max_tokens=self.settings.ai.mistral_max_tokens,
+                messages=[{"role": "user", "content": prompt}]
+            )
+        )
+        return response.choices[0].message.content
+    
+    async def _generate_with_gemini(self, prompt: str) -> str:
+        """Generate content using Google Gemini"""
+        
+        # Configure generation settings
+        generation_config = genai.types.GenerationConfig(
+            max_output_tokens=self.settings.ai.gemini_max_tokens,
+            temperature=self.settings.ai.gemini_temperature,
+        )
+        
+        response = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: self.gemini_model.generate_content(
+                prompt,
+                generation_config=generation_config
+            )
+        )
+        
+        if response.parts:
+            return response.text
+        else:
+            # Handle safety filters or blocked content
+            if hasattr(response, 'prompt_feedback'):
+                feedback = response.prompt_feedback
+                if feedback.block_reason:
+                    raise ValueError(f"Content blocked by Gemini safety filters: {feedback.block_reason}")
+            raise ValueError("Gemini did not generate any content")
     
     def _build_chapter_prompt(self, 
                              storyline: StorylineNode,
@@ -319,6 +407,8 @@ WRITING REQUIREMENTS:
 - Include specific details and dialogue where appropriate
 - Use vivid, engaging prose
 - Preserve the emotional tone of the original recordings
+- Write in complete, well-structured paragraphs
+- Ensure the content is appropriate and family-friendly
 
 STRUCTURE:
 - Start with a compelling opening that sets the scene
@@ -1086,7 +1176,20 @@ class FollowupQuestionsAgent(BaseAgent):
         
         return gap_analysis
 
-# Global agent instances
-chapter_writer_agent = ChapterWriterAgent()
-chapter_harmonizer_agent = ChapterHarmonizerAgent()
-followup_questions_agent = FollowupQuestionsAgent()
+# Global agent instances with settings integration
+def get_chapter_writer_agent() -> ChapterWriterAgent:
+    """Get a properly configured chapter writer agent"""
+    return ChapterWriterAgent()
+
+def get_chapter_harmonizer_agent() -> ChapterHarmonizerAgent:
+    """Get a properly configured chapter harmonizer agent"""
+    return ChapterHarmonizerAgent()
+
+def get_followup_questions_agent() -> FollowupQuestionsAgent:
+    """Get a properly configured followup questions agent"""
+    return FollowupQuestionsAgent()
+
+# Legacy global instances for backward compatibility
+chapter_writer_agent = get_chapter_writer_agent()
+chapter_harmonizer_agent = get_chapter_harmonizer_agent()
+followup_questions_agent = get_followup_questions_agent()

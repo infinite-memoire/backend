@@ -10,3 +10,5 @@ backend.egg-info/
 .firebaserc
 __pycache__/
 *.pyc
+
+artifacts/*

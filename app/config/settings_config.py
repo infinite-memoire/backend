@@ -63,6 +63,32 @@ class BackgroundTaskSettings(BaseSettings):
     class Config:
         env_prefix = "TASK_"
 
+class AISettings(BaseSettings):
+    # AI Service Configuration
+    provider: str = Field("anthropic", description="AI provider: 'anthropic', 'mistral', or 'gemini'")
+    
+    # Anthropic Configuration
+    anthropic_api_key: str = Field(..., description="Anthropic Claude API key")
+    anthropic_model: str = Field("claude-3-sonnet-20240229", description="Default Claude model")
+    anthropic_max_tokens: int = Field(2000, description="Maximum tokens for Claude responses")
+    anthropic_timeout_seconds: int = Field(60, description="API request timeout")
+    
+    # Mistral Configuration
+    mistral_api_key: str = Field(..., description="Mistral AI API key")
+    mistral_model: str = Field("mistral-large-latest", description="Default Mistral model")
+    mistral_max_tokens: int = Field(2000, description="Maximum tokens for Mistral responses")
+    mistral_timeout_seconds: int = Field(60, description="API request timeout")
+    
+    # Google Gemini Configuration
+    gemini_api_key: str = Field(..., description="Google Gemini API key")
+    gemini_model: str = Field("gemini-1.5-pro", description="Default Gemini model")
+    gemini_max_tokens: int = Field(2000, description="Maximum tokens for Gemini responses")
+    gemini_timeout_seconds: int = Field(60, description="API request timeout")
+    gemini_temperature: float = Field(0.7, description="Gemini generation temperature")
+    
+    class Config:
+        env_prefix = "AI_"
+
 class LoggingSettings(BaseSettings):
     # Logging Configuration
     level: str = Field("INFO", description="Logging level")
@@ -81,6 +107,7 @@ class Settings(BaseSettings):
     upload: FileUploadSettings = Field(default_factory=FileUploadSettings)
     task: BackgroundTaskSettings = Field(default_factory=BackgroundTaskSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    ai: AISettings = Field(default_factory=AISettings)
     
     class Config:
         case_sensitive = False
