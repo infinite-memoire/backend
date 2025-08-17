@@ -16,7 +16,7 @@ class WhisperSTTService:
     Implements local hosting strategy with fallback capabilities.
     """
     
-    def __init__(self, model_size: str = "large-v2", device: Optional[str] = None):
+    def __init__(self, model_size: str = "small", device: Optional[str] = None):
         self.model_size = model_size
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
