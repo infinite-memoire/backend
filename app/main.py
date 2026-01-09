@@ -94,10 +94,11 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
 
     # Include API routes
-    from app.api.routes import upload, health, ai_processing, firebase_integration
+    from app.api.routes import upload, health, ai_processing, firebase_integration, graph
     app.include_router(upload.router, prefix=f"{settings.app.api_prefix}/upload")
     app.include_router(ai_processing.router, prefix=f"{settings.app.api_prefix}/ai")
     app.include_router(firebase_integration.router, prefix=settings.app.api_prefix)
+    app.include_router(graph.router, prefix=f"{settings.app.api_prefix}")
     app.include_router(health.router, prefix=f"{settings.app.api_prefix}")
 
     logger.info("Application initialization completed",
